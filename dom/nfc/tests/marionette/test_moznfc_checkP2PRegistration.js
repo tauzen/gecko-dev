@@ -58,18 +58,19 @@ function testWithTargetNoSessionToken() {
 }
 
 /**
- * Success scenario, nfc enabled, activated RE0 (p2p ndef is received)
+ * Success scenario, nfc enabled, activated RE0 (p2p ndef is received, 
+ * creates session token) opeerreadyhandler registered, 
  */
 function testWithSessionTokenWithTarget() {
   log('enabling nfc, activating RE0, registering onpeerready');
   enableNfc(true)
   .then( () => activateRE0() )
-  .then( () => checkOnpeerreadyRegistered() )
+  .then( () => checkP2POnpeerreadyRegistered() )
   .then( () => enableNfc(false) )
   .then( () => runNextTest() );
 }
 
-function checkOnpeerreadyRegistered() {
+function checkP2POnpeerreadyRegistered() {
   let deferred = Promise.defer();
 
   nfc.onpeerready = function() {
@@ -97,16 +98,20 @@ function checkOnpeerreadyRegistered() {
   return deferred.promise;
 }
 
+/**
+ * Success scenario, nfc enabled, activated RE0 (p2p ndef is received, 
+ * creates session token) opeerreadyhandler not registered, 
+ */
 function testWithSessionTokenNoTarget() {
   log('enabling nfc, activating re0, but not  registering onpeerready handler');
   enableNfc(true)
   .then( () => activateRE0() )
-  .then( () => checkOnpeerreadyNotRegistered() )
+  .then( () => checkP2POnpeerreadyNotRegistered() )
   .then( () => enableNfc(false) )
   .then( () => runNextTest() );
 }
 
-function checkOnpeerreadyNotRegistered() {
+function checkP2POnpeerreadyNotRegistered() {
   let deferred = Promise.defer();
 
   let request = nfc.checkP2PRegistration(MANIFEST_URL);
@@ -131,8 +136,10 @@ function checkOnpeerreadyNotRegistered() {
 function enableNfc(enable) {
   let deferred = Promise.defer();
   log('changing nfc state to: ' + enable);
+  
   let request = (enable) ? nfc.startPoll() : nfc.powerOff();
   request.onsuccess = function() {
+    log('finished changing nfc state to: ' + enable);
     deferred.resolve();
   };
   request.onerror = function() {
