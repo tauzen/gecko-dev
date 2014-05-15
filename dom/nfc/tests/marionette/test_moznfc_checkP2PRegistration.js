@@ -12,9 +12,11 @@ let MANIFEST_URL = 'app://system.gaiamobile.org/manifest.webapp';
  * Nfc not enabled -> no session token 
  */
 function testNoTargetNoSessionToken() {
+  log('No opeerready handler, nfc not enabled');
   let request = nfc.checkP2PRegistration(MANIFEST_URL);
   
   request.onsuccess = function() {
+    log('got on success, result should be false: ' + request.result);
     is(request.result, false, 
       'request.status should be false, onpeerready not registered, no session token');
     runNextTest();
@@ -32,6 +34,8 @@ function testNoTargetNoSessionToken() {
  * -> no session token
  */
 function testWithTargetNoSessionToken() {
+  log('onpeerready handler registered, nfc not enabled, no session token');
+
   nfc.onpeerready = function() {
     ok(false, 'onpeerready callback should not be fired');
     runNextTest();
@@ -40,6 +44,7 @@ function testWithTargetNoSessionToken() {
   let request = nfc.checkP2PRegistration(MANIFEST_URL);
 
   request.onsuccess = function() {
+    log('got on success, result should be false: ' + request.result);
     is(request.result, false,
       'request.status should be false, onpeerready registered, no session token');
     runNextTest();
@@ -56,6 +61,7 @@ function testWithTargetNoSessionToken() {
  * Success scenario, nfc enabled, activated RE0 (p2p ndef is received)
  */
 function testWithSessionTokenWithTarget() {
+  log('enabling nfc, activating RE0, registering onpeerready');
   enableNfc(true)
   .then( () => activateRE0() )
   .then( () => checkOnpeerreadyRegistered() )
@@ -72,9 +78,10 @@ function checkOnpeerreadyRegistered() {
 
   let request = nfc.checkP2PRegistration(MANIFEST_URL);
   request.onsuccess = function() {
-    log('onsuccess should have result.status true ' + request.status);
+    log('onsuccess should have result.status true ' + request.result);
     is(request.result, true,
       'request.status should be true, onpeerready registered, session token');
+    log('removing onpeerready handler');
     nfc.onpeerready = null;
     deferred.resolve();
   };
@@ -83,6 +90,7 @@ function checkOnpeerreadyRegistered() {
     log('onerror');
     ok(false, 
       'not possible -> NfcContentHelper.handleCheckP2PRegistrationResponse');
+    nfc.onpeerready = null;
     deferred.resolve();
   };
 
@@ -90,6 +98,7 @@ function checkOnpeerreadyRegistered() {
 }
 
 function testWithSessionTokenNoTarget() {
+  log('enabling nfc, activating re0, but not  registering onpeerready handler');
   enableNfc(true)
   .then( () => activateRE0() )
   .then( () => checkOnpeerreadyNotRegistered() )
@@ -102,7 +111,7 @@ function checkOnpeerreadyNotRegistered() {
 
   let request = nfc.checkP2PRegistration(MANIFEST_URL);
   request.onsuccess = function() {
-    log('onsuccess');
+    log('onsuccess should have result.status false ' + request.result);
     is(request.result, false,
       'request.status should be false, session token but onpeerready not registered');
     deferred.resolve();
