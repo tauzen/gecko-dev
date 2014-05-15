@@ -99,7 +99,7 @@ function checkP2POnpeerreadyRegistered() {
 }
 
 /**
- * Success scenario, nfc enabled, activated RE0 (p2p ndef is received, 
+ * Failure scenario, nfc enabled, activated RE0 (p2p ndef is received, 
  * creates session token) opeerreadyhandler not registered, 
  */
 function testWithSessionTokenNoTarget() {
