@@ -315,8 +315,8 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
                                                NFC.NFC_PEER_EVENT_READY);
       // Remember the current AppId if registered.
       this.currentPeerAppId = (isValid) ? msg.json.appId : null;
-      let status = (isValid) ? NFC.GECKO_NFC_ERROR_SUCCESS :
-                               NFC.GECKO_NFC_ERROR_GENERIC_FAILURE;
+      let status = (isValid) ? NFC.NFC_SUCCESS :
+                               NFC.NFC_GECKO_ERROR_NOT_REGISTERED_PEER_READY;
 
       // Notify the content process immediately of the status
       msg.target.sendAsyncMessage(msg.name + "Response", {
@@ -466,7 +466,7 @@ Nfc.prototype = {
    * @param message
    *        An nsIMessageListener's message parameter.
    */
-  sendNfcErrorResponse: function sendNfcErrorResponse(message) {
+  sendNfcErrorResponse: function sendNfcErrorResponse(message, errorCode) {
     if (!message.target) {
       return;
     }
@@ -475,7 +475,7 @@ Nfc.prototype = {
     message.target.sendAsyncMessage(nfcMsgType, {
       sessionId: message.json.sessionToken,
       requestId: message.json.requestId,
-      status: NFC.GECKO_NFC_ERROR_GENERIC_FAILURE
+      status: errorCode
     });
   },
 
@@ -525,7 +525,7 @@ Nfc.prototype = {
         }
         delete this.targetsByRequestId[message.requestId];
 
-        if (message.status == NFC.GECKO_NFC_ERROR_SUCCESS) {
+        if (message.status === NFC.NFC_SUCCESS) {
           this.powerLevel = message.powerLevel;
         }
 
@@ -580,7 +580,7 @@ Nfc.prototype = {
 
     if (this.powerLevel != NFC.NFC_POWER_LEVEL_ENABLED) {
       debug("NFC is not enabled. current powerLevel:" + this.powerLevel);
-      this.sendNfcErrorResponse(message);
+      this.sendNfcErrorResponse(message, NFC.NFC_GECKO_ERROR_NOT_ENABLED);
       return null;
     }
 
@@ -588,7 +588,7 @@ Nfc.prototype = {
     if (message.json.sessionToken !== this.sessionTokenMap[this._currentSessionId]) {
       debug("Invalid Session Token: " + message.json.sessionToken +
             " Expected Session Token: " + this.sessionTokenMap[this._currentSessionId]);
-      this.sendNfcErrorResponse(message);
+      this.sendNfcErrorResponse(message, NFC.NFC_ERROR_BAD_SESSION_ID);
       return null;
     }
 
