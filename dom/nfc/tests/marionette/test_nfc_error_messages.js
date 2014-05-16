@@ -14,6 +14,7 @@ let NDEF_MESSAGE = [new MozNDEFRecord(new Uint8Array(0x01),
                                       new Uint8Array(0x20))];
 
 let nfcPeers = [];
+let sessionTokens = [];
 
 /**
  * Enables nfc and RE0 then registers onpeerready callback and once 
@@ -56,6 +57,7 @@ function testNfcBadSessionIdError() {
 
 function afterEach() {
   nfcPeers = [];
+  sessionTokens = [];
   runNextTest();
 }
 
@@ -63,7 +65,7 @@ function registerAndFireOnpeerready() {
   let deferred = Promise.defer();
 
   nfc.onpeerready = function(event) {
-    log('got onpeerready');
+    sessionTokens.push(event.detail);
     nfcPeers.push(nfc.getNFCPeer(event.detail));
     nfc.onpeerready = null;
     deferred.resolve();
@@ -73,7 +75,12 @@ function registerAndFireOnpeerready() {
   request.onsuccess = function() {
     log('onsuccess should have result.status true: ' + request.result);
     is(request.result, true, 'P2P registration result');
-    nfc.notifyUserAcceptedP2P(MANIFEST_URL);
+    if(request.result) {
+      nfc.notifyUserAcceptedP2P(MANIFEST_URL);
+    } else {
+      deferred.rejected();
+      toggleNFC(false, runNextTest);
+    }
   };
 
   request.onerror = function() {
@@ -87,11 +94,10 @@ function registerAndFireOnpeerready() {
 }
 
 function sendNDEFExpectError(peer, errorMsg) {
-  log('sendNdef');
   let deferred = Promise.defer();
 
   let req = peer.sendNDEF(NDEF_MESSAGE);
-  req.onsuccess = function() {gi
+  req.onsuccess = function() {
     ok(false, 'success on sending ndef not possible shoudl get: ' + errorMsg);
     deferred.resolve();
   };
