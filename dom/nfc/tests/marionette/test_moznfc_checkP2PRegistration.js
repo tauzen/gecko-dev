@@ -1,6 +1,7 @@
 'use strict';
 
-/* globals log, is, ok, runTests, runNextTest, SpecialPowers, nfc */
+/* globals log, is, ok, runTests, toggleNFC, runNextTest, 
+   SpecialPowers, nfc, activateRE0 */
 
 MARIONETTE_TIMEOUT = 30000;
 MARIONETTE_HEAD_JS = 'head.js';
@@ -47,7 +48,7 @@ function testWithTargetNoSessionToken() {
   request.onsuccess = function() {
     log('got on success, result should be false: ' + request.result);
     is(request.result, false,
-      'request.status should be false, onpeerready registered, no session token');
+      'session token is available and it shouldnt be');
     nfc.onpeerready = null;
     runNextTest();
   };
@@ -80,8 +81,7 @@ function checkP2POnpeerreadyRegistered() {
   request.onsuccess = function() {
     log('onsuccess should have result.status true: ' + request.result);
     is(request.result, true,
-      'request.status should be true, onpeerready registered, session token');
-    log('removing onpeerready handler');
+      'should be true, onpeerready registered, session token available');
     nfc.onpeerready = null;
     deferred.resolve();
   };
@@ -113,7 +113,7 @@ function checkP2POnpeerreadyNotRegistered() {
   request.onsuccess = function() {
     log('onsuccess should have result.status false: ' + request.result);
     is(request.result, false,
-      'request.status should be false, session token but onpeerready not registered');
+      'session token  avilable but onpeerready not registered');
     deferred.resolve();
   };
 
@@ -147,8 +147,7 @@ function checkP2PWrongManifest() {
   request.onsuccess = function() {
     log('onsuccess should have result.status false: ' + request.result);
     is(request.result, false,
-      'request.status should be false, wrong manifest, session token');
-    log('removing onpeerready handler');
+      'session token aviailable, but wrong manifest');
     nfc.onpeerready = null;
     deferred.resolve();
   };
@@ -164,38 +163,11 @@ function checkP2PWrongManifest() {
   return deferred.promise;
 }
 
-function enableNfc(enable) {
-  let deferred = Promise.defer();
-  
-  let request = (enable) ? nfc.startPoll() : nfc.powerOff();
-  request.onsuccess = function() {
-    deferred.resolve();
-  };
-  request.onerror = function() {
-    ok(false, 'operation failed, error ' + request.error.name);
-    runNextTest();
-  };
-
-  return deferred.promise;
-}
-
-function activateRE0() {
-  let deferred = Promise.defer();
-  let cmd = 'nfc nci rf_intf_activated_ntf 0';
-
-  emulator.run(cmd, function(result) {
-    is(result.pop(), 'OK', 'check activation of RE0');
-    deferred.resolve();
-  });
-
-  return deferred.promise;
-}
-
 function runWithRE0(testScenario) {
-  enableNfc(true)
+  toggleNFC(true)
   .then(activateRE0)
   .then(testScenario)
-  .then(() => enableNfc(false))
+  .then(() => toggleNFC(false))
   .then(runNextTest);
 }
 
