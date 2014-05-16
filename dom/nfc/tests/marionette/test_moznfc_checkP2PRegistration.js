@@ -3,8 +3,8 @@
 /* globals log, is, ok, runTests, toggleNFC, runNextTest, 
    SpecialPowers, nfc, activateRE0 */
 
-MARIONETTE_TIMEOUT = 30000;
-MARIONETTE_HEAD_JS = 'head.js';
+const MARIONETTE_TIMEOUT = 30000;
+const MARIONETTE_HEAD_JS = 'head.js';
 
 let MANIFEST_URL = 'app://system.gaiamobile.org/manifest.webapp';
 let FAKE_MANIFEST_URL = 'app://fake.gaiamobile.org/manifest.webapp';
@@ -102,7 +102,7 @@ function checkP2POnpeerreadyRegistered() {
  * creates session token) opeerready handler not registered, 
  */
 function testWithSessionTokenNoTarget() {
-  log('enabling nfc, activating re0, but not  registering onpeerready handler');
+  log('enabling nfc, activating re0, but not registering onpeerready handler');
   runWithRE0(checkP2POnpeerreadyNotRegistered);
 }
 
