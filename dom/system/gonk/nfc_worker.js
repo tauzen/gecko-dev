@@ -146,17 +146,15 @@ let NfcWorker = {
    */
   readNDEF: function readNDEF(message) {
     let cb = function callback() {
-      let error        = Buf.readInt32();
-      let sessionId    = Buf.readInt32();
-      let records      = this.unMarshallNdefMessage();
-
+      let error         = Buf.readInt32();
+      let sessionId     = Buf.readInt32();
+      let records       = this.unMarshallNdefMessage();
       message.type      = "ReadNDEFResponse";
       message.sessionId = sessionId;
       message.records   = records;
-      message.status    = error;
-      
+      message.status    = error;      
       this.sendDOMMessage(message);
-    }
+    };
 
     Buf.newParcel(NFC_REQUEST_READ_NDEF, cb);
     Buf.writeInt32(message.sessionId);
@@ -170,11 +168,9 @@ let NfcWorker = {
     let cb = function callback() {
       let error         = Buf.readInt32();
       let sessionId     = Buf.readInt32();
-
       message.type      = "WriteNDEFResponse";
       message.sessionId = sessionId;
-      message.status    = error;
-      
+      message.status    = error;    
       this.sendDOMMessage(message);
     };
 
@@ -228,11 +224,9 @@ let NfcWorker = {
     let cb = function callback() {
       let error         = Buf.readInt32();
       let sessionId     = Buf.readInt32();
-
       message.type      = "MakeReadOnlyNDEFResponse";
       message.sessionId = sessionId;
       message.status    = error;
-      
       this.sendDOMMessage(message);
     };
 
@@ -254,14 +248,12 @@ let NfcWorker = {
       Buf.readUint8();
       Buf.readUint8();
       let maxSupportedLength     = Buf.readInt32();
-
       message.type               = "GetDetailsNDEFResponse";
       message.sessionId          = sessionId;
       message.isReadOnly         = isReadOnly;
       message.canBeMadeReadOnly  = canBeMadeReadOnly;
       message.maxSupportedLength = maxSupportedLength;
-      message.status             = error;
-      
+      message.status             = error;   
       this.sendDOMMessage(message);
     };
     Buf.newParcel(NFC_REQUEST_GET_DETAILS, cb);
@@ -277,11 +269,9 @@ let NfcWorker = {
     let cb = function callback() {
       let error         = Buf.readInt32();
       let sessionId     = Buf.readInt32();
-
       message.type      = "ConnectResponse";
       message.sessionId = sessionId;
-      message.status    = error;
-      
+      message.status    = error;     
       this.sendDOMMessage(message);
     };
 
@@ -297,10 +287,8 @@ let NfcWorker = {
   config: function config(message) {
     let cb = function callback() {
       let error         = Buf.readInt32();
-
       message.type      = "ConfigResponse";
       message.status    = error;
-      
       this.sendDOMMessage(message);
     };
 
@@ -316,11 +304,9 @@ let NfcWorker = {
     let cb = function callback() {
       let error         = Buf.readInt32();
       let sessionId     = Buf.readInt32();
-
       message.type      = "CloseResponse";
       message.sessionId = sessionId;
-      message.status    = error;
-      
+      message.status    = error;    
       this.sendDOMMessage(message);
     };
 

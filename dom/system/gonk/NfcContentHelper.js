@@ -383,11 +383,8 @@ NfcContentHelper.prototype = {
     Services.DOMRequest.fireSuccess(request, result);
   },
 
-  fireRequestError: function fireRequestError(requestId, error) {
+  fireRequestError: function fireRequestError(requestId, errorMsg) {
     let request = this.takeRequest(requestId);
-    let errorMsg = (error in NFC.NFC_ERROR_MSG) ? 
-                      NFC.NFC_ERROR_MSG[error] :
-                      NFC.NFC_ERROR_MSG[NFCG.NFC_GECKO_ERROR_GENERIC_FAILURE];
                                                       
     if (!request) {
       debug("not firing error for id: " + requestId +
@@ -421,8 +418,8 @@ NfcContentHelper.prototype = {
       case "NFC:MakeReadOnlyNDEFResponse":
       case "NFC:NotifySendFileStatusResponse":
       case "NFC:ConfigResponse":
-        if (result.status !== NFC.NFC_SUCCESS) {
-          this.fireRequestError(atob(result.requestId), result.status);
+        if (result.errorMsg) {
+          this.fireRequestError(atob(result.requestId), result.errorMsg);
         } else {
           this.fireRequestSuccess(atob(result.requestId), result);
         }

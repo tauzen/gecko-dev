@@ -307,6 +307,7 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
               (event === (NFC.NFC_PEER_EVENT_READY | NFC.NFC_PEER_EVENT_LOST)));
     },
 
+    // this should be rethinked 
     checkP2PRegistration: function checkP2PRegistration(msg) {
       // Check if the session and application id yeild a valid registered
       // target.  It should have registered for NFC_PEER_EVENT_READY
@@ -317,6 +318,7 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       this.currentPeerAppId = (isValid) ? msg.json.appId : null;
       let status = (isValid) ? NFC.NFC_SUCCESS :
                                NFC.NFC_GECKO_ERROR_NOT_REGISTERED_PEER_READY;
+
 
       // Notify the content process immediately of the status
       msg.target.sendAsyncMessage(msg.name + "Response", {
@@ -461,7 +463,9 @@ Nfc.prototype = {
   },
 
   /**
-   * Send Error response to content.
+   * Send Error response to content. This is used only 
+   * in case of discovering an error in message received from
+   * content process. 
    *
    * @param message
    *        An nsIMessageListener's message parameter.
@@ -472,11 +476,16 @@ Nfc.prototype = {
     }
 
     let nfcMsgType = message.name + "Response";
-    message.target.sendAsyncMessage(nfcMsgType, {
-      sessionId: message.json.sessionToken,
-      requestId: message.json.requestId,
-      status: errorCode
-    });
+    message.json.errorMsg = this.getErrorMessage(errorCode);
+    message.target.sendAsyncMessage(nfcMsgType, message.json);
+  },
+
+  getErrorMessage: function getErrorMessage(errorCode) {
+    if(!(errorCode in NFC.NFC_ERROR_MSG)) {
+      errorCode = NFC.NFC_GECKO_ERROR_GENERIC_FAILURE;
+    }
+
+    return NFC.NFC_ERROR_MSG[errorCode];
   },
 
   /**
@@ -485,6 +494,11 @@ Nfc.prototype = {
   onmessage: function onmessage(event) {
     let message = event.data;
     debug("Received message from NFC worker: " + JSON.stringify(message));
+
+    // mapping error code to error message
+    if(message.status !== NFC.NFC_SUCCESS) {
+      message.errorMsg = this.getErrorMessage(message.status);
+    }
 
     switch (message.type) {
       case "techDiscovered":
