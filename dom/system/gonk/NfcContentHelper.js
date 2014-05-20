@@ -388,12 +388,12 @@ NfcContentHelper.prototype = {
                                                       
     if (!request) {
       debug("not firing error for id: " + requestId +
-            ", error: " + error + ", msg: " + errorMsg);
+            ", errormsg: " + errorMsg);
       return;
     }
 
     debug("fire request error, id: " + requestId +
-          ", result: " + error + ", msg: " + errorMsg);
+          ", errormsg: " + errorMsg);
 
     Services.DOMRequest.fireError(request, errorMsg);
   },
