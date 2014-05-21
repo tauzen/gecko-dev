@@ -45,7 +45,7 @@ function toggleNFC(enabled, callback) {
   } else {
     req = nfc.powerOff();
   }
-
+  //log('here we should be chaning the status of nfc:' + enabled);
   req.onsuccess = function() {
     if(callback) {
       callback();
@@ -63,12 +63,13 @@ function toggleNFC(enabled, callback) {
   return deferred.promise;
 }
 
-function activateRE0() {
+function enableRE0(id) {
   let deferred = Promise.defer();
-  let cmd = 'nfc nci rf_intf_activated_ntf 0';
-
+  let cmd = 'nfc nci rf_intf_activated_ntf ' + id;
+  //log('sending command: ' + cmd);
   emulator.run(cmd, function(result) {
     is(result.pop(), 'OK', 'check activation of RE0');
+    //log('command executed: ' + cmd);
     deferred.resolve();
   });
 

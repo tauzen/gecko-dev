@@ -2,7 +2,7 @@
 
 
 /* globals log, is, ok, runTests, toggleNFC, runNextTest, 
-   SpecialPowers, nfc, activateRE0, MozNDEFRecord */
+   SpecialPowers, nfc, enableRE0, MozNDEFRecord */
 
 const MARIONETTE_TIMEOUT = 30000;
 const MARIONETTE_HEAD_JS = 'head.js';
@@ -26,7 +26,7 @@ function testNfcNotEnabledError() {
   log('nfc on, re0 on, set and fire onpeerready, nfc off, sendNdef -> ' +
       'should get NfcNotEnabledError');
   toggleNFC(true)
-  .then(activateRE0)
+  .then(()=>enableRE0(0))
   .then(registerAndFireOnpeerready)
   .then(()=>toggleNFC(false))
   .then(()=>sendNDEFExpectError(nfcPeers[0], 'NfcNotEnabledError'))
@@ -44,42 +44,58 @@ function testNfcBadSessionIdError() {
   log('nfc on, re0 on, set/fire onpeerready, nfc off, nfc on, set/fire' +
       'onpeerrady, sendNdef on old mozNFCPeer -> NfcBadSessionIdError');
   toggleNFC(true)
-  .then(activateRE0)
+  .then(()=>enableRE0(0))
   .then(registerAndFireOnpeerready)
   .then(()=>toggleNFC(false))
   .then(()=>toggleNFC(true))
+  .then(()=>enableRE0(0))
   .then(registerAndFireOnpeerready)
   // we have 2 peers in nfcPeers array, peer0 has old/invalid session token
   .then(()=>sendNDEFExpectError(nfcPeers[0], 'NfcBadSessionIdError'))
   .then(()=>toggleNFC(false))
-  .then(afterEach);
+  .then(afterEach)
+  .catch(function() {
+    log('im in catch!!!!!!!');
+    toggleNFC(false);
+    afterEach();
+  });
 }
 
 function afterEach() {
   nfcPeers = [];
   sessionTokens = [];
+  //log('finishing test ******************************************************');
   runNextTest();
 }
 
 function registerAndFireOnpeerready() {
+  //log('registerAndFireOnpeerready');
+  ////log(nfcPeers);
+  //log(sessionTokens);
   let deferred = Promise.defer();
 
+  //log('setting on peerready handler');
   nfc.onpeerready = function(event) {
+    //log('onpeerready fired, creating nfcPeer and storing session token: ' + event.detail);
     sessionTokens.push(event.detail);
     nfcPeers.push(nfc.getNFCPeer(event.detail));
+    //log('removing on peerready handler');
     nfc.onpeerready = null;
     deferred.resolve();
   };
 
+  //log('checkP2P request');
   let request = nfc.checkP2PRegistration(MANIFEST_URL);
   request.onsuccess = function() {
-    log('onsuccess should have result.status true: ' + request.result);
+    //log('onsuccess should have result.status true: ' + request.result);
     is(request.result, true, 'P2P registration result');
     if(request.result) {
+      //log('sending notify acceptedp2p')
       nfc.notifyUserAcceptedP2P(MANIFEST_URL);
     } else {
-      deferred.rejected();
-      toggleNFC(false, runNextTest);
+      //log('this should not happen');
+      deferred.reject();
+      //toggleNFC(false, runNextTest);
     }
   };
 
@@ -90,24 +106,32 @@ function registerAndFireOnpeerready() {
     toggleNFC(false, runNextTest);
   };
 
+  //log('retufning promise in registerAndFireOnpeerready');
   return deferred.promise;
 }
 
 function sendNDEFExpectError(peer, errorMsg) {
+  //log('sendingNdef and expext error: ' + errorMsg);
   let deferred = Promise.defer();
 
+  //log('sending ndef');
   let req = peer.sendNDEF(NDEF_MESSAGE);
+  //log('setting onsuccess handler');
   req.onsuccess = function() {
+    //log('we should not be able to do this');
     ok(false, 'success on sending ndef not possible shoudl get: ' + errorMsg);
     deferred.resolve();
   };
 
+  //log('setting onerror handler');
   req.onerror = function() {
+    //log('got error as planned')
     ok(true, 'this should happen');
     is(req.error.name, errorMsg, 'Should have proper error name');
     deferred.resolve();
   };
 
+  //log('returning promise in sendEndef, error:' + errorMsg);
   return deferred.promise;
 }
 

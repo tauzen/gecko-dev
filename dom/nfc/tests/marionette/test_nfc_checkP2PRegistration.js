@@ -1,7 +1,7 @@
 'use strict';
 
 /* globals log, is, ok, runTests, toggleNFC, runNextTest, 
-   SpecialPowers, nfc, activateRE0 */
+   SpecialPowers, nfc, enableRE0 */
 
 const MARIONETTE_TIMEOUT = 30000;
 const MARIONETTE_HEAD_JS = 'head.js';
@@ -165,7 +165,7 @@ function checkP2PWrongManifest() {
 
 function runWithRE0(testScenario) {
   toggleNFC(true)
-  .then(activateRE0)
+  .then(()=>enableRE0(0))
   .then(testScenario)
   .then(() => toggleNFC(false))
   .then(runNextTest);

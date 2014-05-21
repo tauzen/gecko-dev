@@ -221,21 +221,29 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
     },
 
     registerPeerTarget: function registerPeerTarget(msg) {
+      debug('km - registerPeerTarget check');
+      debug(JSON.stringify(msg));
+      debug('km - peerTargetsMap ');
+      debug(JSON.stringify(this.peerTargetsMap));
       let appInfo = msg.json;
       // Sanity check on PeerEvent
       if (!this.isValidPeerEvent(appInfo.event)) {
         return;
       }
+
+      debug('km - valid event');
       let targets = this.peerTargetsMap;
       let targetInfo = targets[appInfo.appId];
       // If the application Id is already registered
       if (targetInfo) {
+        debug('application id already registered');
         // If the event is not registered
         if (targetInfo.event !== appInfo.event) {
           // Update the event field ONLY
           targetInfo.event |= appInfo.event;
         }
         // Otherwise event is already registered, return!
+
         return;
       }
       // Target not registered yet! Add to the target map
@@ -245,10 +253,18 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       // event  : NFC_PEER_EVENT_READY (0x01) Or NFC_PEER_EVENT_LOST (0x02)
       let newTargetInfo = { target : msg.target,
                             event  : appInfo.event };
+      debug('km - target to be registered');
+      debug(JSON.stringify(newTargetInfo));
       targets[appInfo.appId] = newTargetInfo;
+      debug('after registering targets map');
+      debug(JSON.stringify(this.peerTargetsMap));
     },
 
     unregisterPeerTarget: function unregisterPeerTarget(msg) {
+      debug('km - unregister peer target');
+      debug(JSON.stringify(msg));
+      debug('km - targets map');
+      debug(JSON.stringify(this.peerTargetsMap));
       let appInfo = msg.json;
       // Sanity check on PeerEvent
       if (!this.isValidPeerEvent(appInfo.event)) {
@@ -260,16 +276,23 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
         // Application Id registered and the event exactly matches.
         if (targetInfo.event === appInfo.event) {
           // Remove the target from the list of registered targets
-          delete targets[appInfo.appId]
+          debug('km - unregistering target');
+          delete targets[appInfo.appId];
         }
         else {
           // Otherwise, update the event field ONLY, by removing the event flag
           targetInfo.event &= ~appInfo.event;
         }
       }
+      debug('km - trgets map after unregister');
+      debug(JSON.stringify(this.peerTargetsMap));
     },
 
     removePeerTarget: function removePeerTarget(target) {
+      debug('km - removePeerTarget');
+      debug(JSON.stringify(target));
+      debug('km - targets map');
+      debug(JSON.stringify(this.peerTargetsMap));
       let targets = this.peerTargetsMap;
       Object.keys(targets).forEach((appId) => {
         let targetInfo = targets[appId];
@@ -278,12 +301,18 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
           delete targets[appId];
         }
       });
+      debug('km - targets map after remove');
+      debug(JSON.stringify(this.peerTargetsMap));
     },
 
     isRegisteredP2PTarget: function isRegisteredP2PTarget(appId, event) {
       let targetInfo = this.peerTargetsMap[appId];
       // Check if it is a registered target for the 'event'
-      return ((targetInfo != null) && (targetInfo.event & event !== 0));
+      debug('km - isRegisteredP2PTarget, targetInfo');
+      debug(JSON.stringify(targetInfo));
+      let v = ((targetInfo != null) && (targetInfo.event & event !== 0));
+      debug('km - returning value: ' + v);
+      return v;
     },
 
     notifyPeerEvent: function notifyPeerEvent(appId, event) {
@@ -309,11 +338,22 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
 
     // this should be rethinked 
     checkP2PRegistration: function checkP2PRegistration(msg) {
+      debug('km - checkP2PRegistration');
+      debug(JSON.stringify(msg));
+      debug('km - targets map');
+      debug(JSON.stringify(this.peerTargetsMap));
       // Check if the session and application id yeild a valid registered
       // target.  It should have registered for NFC_PEER_EVENT_READY
+      debug('km - sessionTokenMap');
+      debug(JSON.stringify(this.nfc.sessionTokenMap));
+      debug('km - currentSessionId');
+      debug(JSON.stringify(this.nfc.currentSessionId));
       let isValid = !!this.nfc.sessionTokenMap[this.nfc._currentSessionId] &&
                     this.isRegisteredP2PTarget(msg.json.appId,
                                                NFC.NFC_PEER_EVENT_READY);
+      debug('km - valid: ' + isValid);
+
+
       // Remember the current AppId if registered.
       this.currentPeerAppId = (isValid) ? msg.json.appId : null;
       let status = (isValid) ? NFC.NFC_SUCCESS :
@@ -503,7 +543,9 @@ Nfc.prototype = {
     switch (message.type) {
       case "techDiscovered":
         this._currentSessionId = message.sessionId;
-
+        debug('techDiscovered initial situation');
+        debug('km - currentSessionId: ' + this._currentSessionId);
+        debug('km - this.sessionTokenMap: ' + JSON.stringify(this.sessionTokenMap));
         // Check if the session token already exists. If exists, continue to use the same one.
         // If not, generate a new token.
         if (!this.sessionTokenMap[this._currentSessionId]) {
@@ -514,6 +556,8 @@ Nfc.prototype = {
         // Do not expose the actual session to the content
         delete message.sessionId;
 
+        debug('km - sending out message in techDiscovered');
+        debug(JSON.stringify(this.sessionTokenMap));
         gSystemMessenger.broadcastMessage("nfc-manager-tech-discovered", message);
         break;
       case "techLost":
