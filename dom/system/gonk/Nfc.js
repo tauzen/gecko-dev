@@ -478,11 +478,8 @@ Nfc.prototype = {
   },
 
   getErrorMessage: function getErrorMessage(errorCode) {
-    if(!(errorCode in NFC.NFC_ERROR_MSG)) {
-      errorCode = NFC.NFC_GECKO_ERROR_GENERIC_FAILURE;
-    }
-
-    return NFC.NFC_ERROR_MSG[errorCode];
+    return NFC.NFC_ERROR_MSG[errorCode] || 
+           NFC.NFC_ERROR_MSG[NFC.NFC_GECKO_ERROR_GENERIC_FAILURE];
   },
 
   /**
