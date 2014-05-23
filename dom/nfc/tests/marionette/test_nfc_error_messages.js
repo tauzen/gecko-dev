@@ -21,7 +21,7 @@ let sessionTokens = [];
 /**
  * Enables nfc and RE0 then registers onpeerready callback and once
  * it's fired it creates mozNFCPeer and stores it for later.
- * After disabling nfc tries to do mozNFCPeer.sendNdef which should
+ * After disabling nfc tries to do mozNFCPeer.sendNDEF which should
  * fail with NfcNotEnabledError.
  */
 function testNfcNotEnabledError() {
@@ -36,10 +36,10 @@ function testNfcNotEnabledError() {
 }
 
 /**
- * Enables nfc and RE0, register onpeerready callback, once it fires
- * creates and stores mozNFCPeer. Disables nfc, enables nfc and
+ * Enables nfc and RE0, register onpeerready callback, once it's fired
+ * it creates and stores mozNFCPeer. Disables nfc, enables nfc and
  * once again registers and fires new onpeerready callback and stores
- * mozNfcPeer. Than fires sendNdef on the first stored peer which
+ * mozNfcPeer. Than fires sendNDEF on the first stored peer which
  * should have invalid session token and we should get NfcBadSessionIdError
  */
 function testNfcBadSessionIdError() {
@@ -59,8 +59,8 @@ function testNfcBadSessionIdError() {
 }
 
 /**
- * Eables nfc and RE0, register onpeerready callback, once it fires
- * stores sessionToken. Using sessionToken cretes mozNFCTag and fires
+ * Eables nfc and RE0, register onpeerready callback, once it's fired
+ * it stores sessionToken. Using sessionToken cretes mozNFCTag and fires
  * mozNFCTag.connect('NDEF') which should result in NfcConnectError.
  */
 function testNfcConnectError() {
