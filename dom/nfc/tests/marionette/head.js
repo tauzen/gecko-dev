@@ -59,6 +59,17 @@ function toggleNFC(enabled) {
   return deferred.promise;
 }
 
+function clearPendingMessages(type) {
+  if (!window.navigator.mozHasPendingMessage(type)) {
+    return;
+  }
+
+  // setting a handler removes all messages from queue
+  window.navigator.mozSetMessageHandler(type, function() {
+    window.navigator.mozSetMessageHandler(type, null);
+  });
+}
+
 function enableRE0() {
   let deferred = Promise.defer();
   let cmd = 'nfc nci rf_intf_activated_ntf 0';
@@ -73,6 +84,8 @@ function enableRE0() {
 
 function cleanUp() {
   log('Cleaning up');
+  clearPendingMessages('nfc-manager-tech-discovered');
+  clearPendingMessages('nfc-manager-tech-lost');
   waitFor(function() {
             SpecialPowers.removePermission("nfc-manager", document);
             finish()
