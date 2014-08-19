@@ -95,6 +95,13 @@ interface nsINfcContentHelper : nsISupports
   void unregisterTargetForPeerReady(in nsIDOMWindow window,
                                     in unsigned long appId);
 
+  void registerTargetForPeerFound(in nsIDOMWindow window,
+                                  in unsigned long appId);
+
+  void unregisterTargetForPeerFound(in nsIDOMWindow window,
+                                    in unsigned long appId);
+
+
  /**
   * Checks if the given application's id is a registered peer target (with the Chrome process)
   *

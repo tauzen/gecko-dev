@@ -63,7 +63,9 @@ const NFC_IPC_WRITE_PERM_MSG_NAMES = [
   "NFC:MakeReadOnlyNDEF",
   "NFC:SendFile",
   "NFC:RegisterPeerReadyTarget",
-  "NFC:UnregisterPeerReadyTarget"
+  "NFC:UnregisterPeerReadyTarget",
+  "NFC:RegisterPeerFoundTarget",
+  "NFC:UnregisterPeerFoundTarget"
 ];
 
 const NFC_IPC_MANAGER_PERM_MSG_NAMES = [
@@ -177,6 +179,14 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       }
     },
 
+    registerPeerFoundTarget: function registerPeerFoundTarget(msg) {
+      debug('wowwwww ale daleko, ' + JSON.stringify(msg));
+    },
+
+    unregisterPeerFoundTarget: function unregisterPeerFoundTarget(msg) {
+      debug('wowwwww ale daleko, ' + JSON.stringify(msg));
+    },
+
     removePeerTarget: function removePeerTarget(target) {
       let targets = this.peerTargetsMap;
       Object.keys(targets).forEach((appId) => {
@@ -281,6 +291,14 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
           return null;
         case "NFC:UnregisterPeerReadyTarget":
           this.unregisterPeerReadyTarget(message);
+          return null;
+        case "NFC:RegisterPeerFoundTarget":
+          debug('nfc.js we got register peerfound');
+          this.registerPeerFoundTarget(msg);
+          return null;
+        case "NFC:UnregisterPeerFoundTarget":
+          debug('nfc.js we got unregister peerfound');
+          this.unregisterPeerFoundTarget(msg);
           return null;
         case "NFC:CheckP2PRegistration":
           this.checkP2PRegistration(message);

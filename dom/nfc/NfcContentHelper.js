@@ -279,6 +279,26 @@ NfcContentHelper.prototype = {
     cpmm.sendAsyncMessage("NFC:UnregisterPeerReadyTarget", { appId: appId });
   },
 
+  registerTargetForPeerFound: function registerTargetForPeerFound(window, appId) {
+    debug('Got register peerfound target');
+    if (window == null) {
+      throw Components.Exception("Can't get window object",
+                                  Cr.NS_ERROR_UNEXPECTED);
+    }
+
+    cpmm.sendAsyncMessage("NFC:RegisterPeerFoundTarget", { appId: appId });
+  },
+
+  unregisterTargetForPeerFound: function unregisterTargetForPeerFound(window, appId) {
+    debug('Got unregister peerfound target');
+    if (window == null) {
+      throw Components.Exception("Can't get window object",
+                                  Cr.NS_ERROR_UNEXPECTED);
+    }
+
+    cpmm.sendAsyncMessage("NFC:UnregisterPeerFoundTarget", { appId: appId });
+  },
+
   checkP2PRegistration: function checkP2PRegistration(window, appId) {
     if (window == null) {
       throw Components.Exception("Can't get window object",
