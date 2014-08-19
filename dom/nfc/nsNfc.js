@@ -244,6 +244,7 @@ mozNfc.prototype = {
         break;
       case 'peerfound':
         debug('we got onpeerfound added');
+        this._nfcContentHelper.registerTargetForPeerFound(this._window, appId);
     }
   },
 
@@ -257,6 +258,7 @@ mozNfc.prototype = {
         break;
       case 'peerfound':
         debug('we got onpeerfound removed');
+        this._nfcContentHelper.unregisterTargetForPeerFound(this._window, appId);
     }
     
   },
