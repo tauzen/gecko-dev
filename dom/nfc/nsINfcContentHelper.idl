@@ -27,7 +27,7 @@ interface nsINfcPeerEventListener : nsISupports
    void notifyPeerLost(in DOMString sessionToken);
 };
 
-[scriptable, uuid(9a41d969-3375-4933-814e-2da781c8f691)]
+[scriptable, uuid(9a41d969-3375-4933-814e-2da781c8f692)]
 interface nsINfcContentHelper : nsISupports
 {
   const long NFC_EVENT_PEER_READY = 0x01;
