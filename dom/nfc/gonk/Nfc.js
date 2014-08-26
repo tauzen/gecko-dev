@@ -436,6 +436,8 @@ Nfc.prototype = {
         // Do not expose the actual session to the content
         delete message.sessionId;
 
+        // TODO: shouldn't be sent from NfcService
+        delete message.hciEventTransaction;
         gSystemMessenger.broadcastMessage("nfc-manager-tech-discovered", message);
         break;
       case "TechLostNotification":
@@ -446,6 +448,8 @@ Nfc.prototype = {
         // Do not expose the actual session to the content
         delete message.sessionId;
 
+        // TODO: shouldn't be sent from NfcService
+        delete message.hciEventTransaction;
         gSystemMessenger.broadcastMessage("nfc-manager-tech-lost", message);
         gMessageManager.onPeerLost(this.sessionTokenMap[this._currentSessionId]);
 
@@ -453,11 +457,13 @@ Nfc.prototype = {
         this._currentSessionId = null;
 
         break;
+     case "HCIEventTransactionNotification":
+        this.notifyHCIEventTransaction(message);
+        break;
      case "ConfigResponse":
         if (message.status === NFC.NFC_SUCCESS) {
           this.powerLevel = message.powerLevel;
         }
-
         this.sendNfcResponse(message);
         break;
       case "ConnectResponse": // Fall through.
@@ -471,6 +477,22 @@ Nfc.prototype = {
       default:
         throw new Error("Don't know about this message type: " + message.type);
     }
+  },
+
+  // HCI Event Transaction
+  notifyHCIEventTransaction: function notifyHCIEventTransaction(message) {
+    debug("notifyHCIEventTransaction: " + JSON.stringify(message));
+
+    let evtTxn = message.hciEventTransaction;
+    let seNameBase = NFC.NFC_SECURE_ELEMENT_NAMES[evtTxn.originType];
+
+    let msg = {
+      seName: seNameBase + evtTxn.originIndex,
+      aid: evtTxn.aid,
+      payload: evtTxn.payload
+    };
+
+    gSystemMessenger.broadcastMessage("nfc-hci-event-transaction", msg);
   },
 
   nfcService: null,

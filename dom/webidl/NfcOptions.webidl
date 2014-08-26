@@ -10,6 +10,14 @@ dictionary NDEFRecord
   Uint8Array payload;
 };
 
+dictionary HCIEventTransaction
+{
+  long originType;
+  long originIndex;
+  Uint8Array aid;
+  Uint8Array payload;
+};
+
 dictionary NfcCommandOptions
 {
   DOMString type = "";
@@ -43,4 +51,6 @@ dictionary NfcEventOptions
   long maxSupportedLength;
 
   long powerLevel;
+
+  HCIEventTransaction hciEventTransaction;
 };

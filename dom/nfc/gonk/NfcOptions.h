@@ -17,6 +17,14 @@ struct NDEFRecordStruct
   nsTArray<uint8_t> mPayload;
 };
 
+struct HCIEventTransactionStruct
+{
+  int32_t mOriginType;
+  int32_t mOriginIndex;
+  nsTArray<uint8_t> mAid;
+  nsTArray<uint8_t> mPayload;
+};
+
 struct CommandOptions
 {
   CommandOptions(const mozilla::dom::NfcCommandOptions& aOther) {
@@ -84,7 +92,10 @@ struct EventOptions
   EventOptions()
     : mType(EmptyString()), mStatus(-1), mSessionId(-1), mRequestId(EmptyString()), mMajorVersion(-1), mMinorVersion(-1),
       mIsReadOnly(-1), mCanBeMadeReadOnly(-1), mMaxSupportedLength(-1), mPowerLevel(-1)
-  {}
+  {
+      mHciEventTransaction.mOriginType = -1;
+      mHciEventTransaction.mOriginIndex = -1;
+  }
 
   nsString mType;
   int32_t mStatus;
@@ -98,6 +109,7 @@ struct EventOptions
   int32_t mCanBeMadeReadOnly;
   int32_t mMaxSupportedLength;
   int32_t mPowerLevel;
+  HCIEventTransactionStruct mHciEventTransaction;
 };
 
 } // namespace mozilla
