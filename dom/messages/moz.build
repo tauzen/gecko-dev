@@ -7,6 +7,8 @@
 DIRS += ['interfaces']
 
 EXTRA_COMPONENTS += [
+    'HCIEventTransactionSystemMessage.manifest',
+    'HCIEventTransactionSystemMessageConfigurator.js',
     'SystemMessageInternal.js',
     'SystemMessageManager.js',
     'SystemMessageManager.manifest',
