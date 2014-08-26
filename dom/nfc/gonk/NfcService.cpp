@@ -162,21 +162,20 @@ public:
     COPY_OPT_FIELD(mCanBeMadeReadOnly, -1)
     COPY_OPT_FIELD(mMaxSupportedLength, -1)
 
-    COPY_OPT_FIELD(mHciEventTransaction.mOriginType, -1);
-    COPY_OPT_FIELD(mHciEventTransaction.mOriginIndex, -1);
+    COPY_OPT_FIELD(mOrigin, EmptyString());
 
-    if (mEvent.mHciEventTransaction.mAid.Length() > 0) {
-      event.mHciEventTransaction.mAid.Construct();
-      event.mHciEventTransaction.mAid.Value().Init(
-        Uint8Array::Create(cx, mEvent.mHciEventTransaction.mAid.Length(),
-                           mEvent.mHciEventTransaction.mAid.Elements()));
+    if (mEvent.mAid.Length() > 0) {
+      event.mAid.Construct();
+      event.mAid.Value().Init(
+        Uint8Array::Create(cx, mEvent.mAid.Length(),
+                           mEvent.mAid.Elements()));
     }
 
-    if (mEvent.mHciEventTransaction.mPayload.Length() > 0) {
-      event.mHciEventTransaction.mPayload.Construct();
-      event.mHciEventTransaction.mPayload.Value().Init(
-        Uint8Array::Create(cx, mEvent.mHciEventTransaction.mPayload.Length(),
-                           mEvent.mHciEventTransaction.mPayload.Elements()));
+    if (mEvent.mPayload.Length() > 0) {
+      event.mPayload.Construct();
+      event.mPayload.Value().Init(
+        Uint8Array::Create(cx, mEvent.mPayload.Length(),
+                           mEvent.mPayload.Elements()));
     }
 
 #undef COPY_FIELD

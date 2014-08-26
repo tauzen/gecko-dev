@@ -52,5 +52,7 @@ dictionary NfcEventOptions
 
   long powerLevel;
 
-  HCIEventTransaction hciEventTransaction;
+  DOMString origin;
+  Uint8Array aid;
+  Uint8Array payload;
 };

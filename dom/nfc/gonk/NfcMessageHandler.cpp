@@ -307,15 +307,17 @@ NfcMessageHandler::HCIEventTransactionNotification(const Parcel& aParcel, EventO
 {
   aOptions.mType = NS_ConvertUTF8toUTF16(kHCIEventTransactionNotification);
 
-  aOptions.mHciEventTransaction.mOriginType = aParcel.readInt32();
-  aOptions.mHciEventTransaction.mOriginIndex = aParcel.readInt32();
+  int32_t originType = aParcel.readInt32();
+  int32_t originIndex = aParcel.readInt32();
+
+  aOptions.mOrigin = NS_ConvertUTF8toUTF16(kHCIEventTransactionNotification);
 
   int32_t aidLength = aParcel.readInt32();
-  aOptions.mHciEventTransaction.mAid.AppendElements(
+  aOptions.mAid.AppendElements(
        static_cast<const uint8_t*>(aParcel.readInplace(aidLength)), aidLength);
 
   int32_t payloadLength = aParcel.readInt32();
-  aOptions.mHciEventTransaction.mPayload.AppendElements(
+  aOptions.mPayload.AppendElements(
        static_cast<const uint8_t*>(aParcel.readInplace(payloadLength)), payloadLength);
 
   return true;
