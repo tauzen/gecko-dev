@@ -279,6 +279,23 @@ mozNfc.prototype = {
     this.__DOM_IMPL__.dispatchEvent(event);
   },
 
+  notifyPeerFound: function notifyPeerFound(sessionToken) {
+    debug('notifyPeerFound yeah!');
+    if (this.hasDeadWrapper()) {
+      dump("peerFound this._window or this.__DOM_IMPL__ is a dead wrapper.");
+      return;
+    }
+
+    this.session = sessionToken;
+
+    debug("fire onpeerfound sessionToken : " + sessionToken);
+    let eventData = {
+      "peer":this.getNFCPeer(sessionToken)
+    };
+    let event = new this._window.MozNFCPeerEvent("peerfound", eventData);
+    this.__DOM_IMPL__.dispatchEvent(event);
+  },
+
   notifyPeerLost: function notifyPeerLost(sessionToken) {
     if (this.hasDeadWrapper()) {
       dump("this._window or this.__DOM_IMPL__ is a dead wrapper.");
