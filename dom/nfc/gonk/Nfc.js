@@ -166,21 +166,49 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       }
     },
 
-    registerPeerFoundTarget: function registerPeerFoundTarget(msg) {
-      debug('wowwwww ale daleko, ' + JSON.stringify(msg));
+    registerPeerFoundTarget: function registerPeerFoundTarget(message) {
+      debug('registerPeerFoundTarget, ' + JSON.stringify(message));
+      
+      if (this.peerTargetsMap[message.data.appId]) {
+        debug('Already registered handler for onpeerfound/onpeerready, not registering');
+        return;
+      }
+
+      debug('Registering peerfound handler for app:' + message.data.appId);
+      debug('target: ' +  JSON.stringify(message.target));
+      this.peerTargetsMap[message.data.appId] = {
+        target: message.target,
+        isPeerReadyCalled: false,
+        type: 'peerfound'
+      };
     },
 
-    unregisterPeerFoundTarget: function unregisterPeerFoundTarget(msg) {
-      debug('wowwwww ale daleko, ' + JSON.stringify(msg));
+    unregisterPeerFoundTarget: function unregisterPeerFoundTarget(message) {
+      debug('unregisterPeerFoundTarget, ' + JSON.stringify(message));
+
+      if (this.peerTargetsMap[message.data.aid]) {
+        debug('Removing onpeerfound handler');
+        delete this.peerTargetsMap[message.data.aid];
+      }
     },
 
     removePeerTarget: function removePeerTarget(target) {
+<<<<<<< HEAD
       Object.keys(this.peerTargets).forEach((appId) => {
         if (this.peerTargets[appId] === target) {
           if (this.currentPeer === target) {
             this.currentPeer = null;
           }
           delete this.peerTargets[appId];
+=======
+      let targets = this.peerTargetsMap;
+      Object.keys(targets).forEach((appId) => {
+        let targetInfo = targets[appId];
+        if (targetInfo && targetInfo.target === target) {
+          // Remove the target from the list of registered targets
+          debug('Removing peer target, appId: ' + appId + ', targetInfo: ' + JSON.stringify(targetInfo));
+          delete targets[appId];
+>>>>>>> going up
         }
       });
     },
@@ -237,6 +265,35 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       this.currentPeer = null;
     },
 
+    onPeerFound: function onPeerFound(message) {
+     
+      if (message.records || message.techList.join() !== 'P2P') {
+        debug('Not a P2P notification');
+        return false;
+      }
+
+      let onPeerFoundTargets = Object.keys(this.peerTargetsMap).filter((appId) => {
+        return this.peerTargetsMap[appId].type === 'peerfound';
+      });
+
+      if(!onPeerFoundTargets.length) {
+        debug('No onpeerfound targets');
+        return false;
+      }
+
+      onPeerFoundTargets.forEach((appId) => {
+        debug('sending event to appId: ' + JSON.stringify(appId));
+        let targetInfo = this.peerTargetsMap[appId];
+        targetInfo.isPeerReadyCalled = true;
+        targetInfo.target.sendAsyncMessage("NFC:PeerEvent", {
+          event: 'peerfound',
+          sessionToken: message.sessionToken
+        });
+      });
+
+      return true;
+    },
+
     /**
      * nsIMessageListener interface methods.
      */
@@ -291,11 +348,11 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
           return null;
         case "NFC:RegisterPeerFoundTarget":
           debug('nfc.js we got register peerfound');
-          this.registerPeerFoundTarget(msg);
+          this.registerPeerFoundTarget(message);
           return null;
         case "NFC:UnregisterPeerFoundTarget":
           debug('nfc.js we got unregister peerfound');
-          this.unregisterPeerFoundTarget(msg);
+          this.unregisterPeerFoundTarget(message);
           return null;
         case "NFC:CheckP2PRegistration":
           this.checkP2PRegistration(message);
@@ -442,7 +499,11 @@ Nfc.prototype = {
         // Do not expose the actual session to the content
         delete message.sessionId;
 
-        gSystemMessenger.broadcastMessage("nfc-manager-tech-discovered", message);
+        // checking if message is P2P notification and if onpeerfound can be fired,
+        // if not we send the system message to NfcManager to handle it in gaia
+        if (!gMessageManager.onPeerFound(message)) {
+          gSystemMessenger.broadcastMessage("nfc-manager-tech-discovered", message);
+        }
         break;
       case "TechLostNotification":
         message.type = "techLost";

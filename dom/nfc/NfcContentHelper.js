@@ -440,6 +440,9 @@ NfcContentHelper.prototype = {
           case NFC.NFC_PEER_EVENT_LOST:
             this.peerEventListener.notifyPeerLost(result.sessionToken);
             break;
+          case 'peerfound':
+            this.peerEventListener.notifyPeerFound(result.sessionToken);
+            break;
         }
         break;
     }

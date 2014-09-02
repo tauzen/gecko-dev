@@ -7,7 +7,7 @@
 
 interface nsIVariant;
 
-[scriptable, uuid(57fc2998-1058-4fd5-8dd9-0e303218d5fd)]
+[scriptable, uuid(57fc2998-1058-4fd5-8dd9-0e303218d5fe)]
 interface nsINfcPeerEventListener : nsISupports
 {
   /**
@@ -17,6 +17,8 @@ interface nsINfcPeerEventListener : nsISupports
    *        SessionToken received from Chrome process
    */
    void notifyPeerReady(in DOMString sessionToken);
+
+   void notifyPeerFound(in DOMString sessionToken);
 
   /**
    * Callback function used to notify peerlost.
