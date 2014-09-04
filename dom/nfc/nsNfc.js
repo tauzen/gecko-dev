@@ -97,6 +97,8 @@ MozNFCPeer.prototype = {
 
   // NFCPeer interface:
   sendNDEF: function sendNDEF(records) {
+    debug('We should be here with the proper ndef record');
+    debug(JSON.stringify(records[0]));
     if (this._isLost) {
       throw new this._window.DOMError("InvalidStateError", "NFCPeer object is invalid");
     }

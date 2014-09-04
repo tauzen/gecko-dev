@@ -199,9 +199,9 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
     unregisterPeerFoundTarget: function unregisterPeerFoundTarget(message) {
       debug('unregisterPeerFoundTarget, ' + JSON.stringify(message));
 
-      if (this.peerTargetsMap[message.data.aid]) {
+      if (this.peerTargetsMap[message.data.appId]) {
         debug('Removing onpeerfound handler');
-        delete this.peerTargetsMap[message.data.aid];
+        delete this.peerTargetsMap[message.data.appId];
       }
     },
 
@@ -224,7 +224,7 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
 
     isPeerReadyCalled: function isPeerReadyCalled(appId) {
       let targetInfo = this.peerTargetsMap[appId];
-      return !!targetInfo.IsPeerReadyCalled;
+      return !!targetInfo.isPeerReadyCalled;
     },
 
     notifyPeerEvent: function notifyPeerEvent(appId, event, sessionToken) {
@@ -253,16 +253,19 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
 
     onPeerLost: function onPeerLost(sessionToken) {
       let appId = this.currentPeerAppId;
+      debug('onpeerlost for appId:' + appId + ', sessionToken: ' + sessionToken);
+      debug('is peerrreadytarget: ' + this.isPeerReadyTarget(appId));
+      debug('is peerreadycalled: ' + this.isPeerReadyCalled(appId));
       // For peerlost, the message is delievered to the target which
       // registered onpeerready and onpeerready has been called before.
       if (this.isPeerReadyTarget(appId) && this.isPeerReadyCalled(appId)) {
+        debug('notifying!');
         this.notifyPeerEvent(appId, NFC.NFC_PEER_EVENT_LOST, sessionToken);
         this.currentPeerAppId = null;
       }
     },
 
-    onPeerFound: function onPeerFound(message) {
-     
+    onPeerFound: function onPeerFound(message) {    
       if (message.records || message.techList.join() !== 'P2P') {
         debug('Not a P2P notification');
         return false;
@@ -278,7 +281,8 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       }
 
       onPeerFoundTargets.forEach((appId) => {
-        debug('sending event to appId: ' + JSON.stringify(appId));
+        debug('sending event to appId: ' + appId);
+        this.currentPeerAppId = appId;
         let targetInfo = this.peerTargetsMap[appId];
         targetInfo.isPeerReadyCalled = true;
         targetInfo.target.sendAsyncMessage("NFC:PeerEvent", {
@@ -359,7 +363,7 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
           }
 
           let targetInfo = this.peerTargetsMap[message.data.appId];
-          targetInfo.IsPeerReadyCalled = true;
+          targetInfo.isPeerReadyCalled = true;
           let sessionToken = this.nfc.sessionTokenMap[this.nfc._currentSessionId];
           this.notifyPeerEvent(message.data.appId, NFC.NFC_PEER_EVENT_READY, sessionToken);
           return null;
