@@ -160,6 +160,7 @@ NfcContentHelper.prototype = {
   },
 
   writeNDEF: function writeNDEF(window, records, sessionToken) {
+    debug('trying to write NDEF');
     if (window == null) {
       throw Components.Exception("Can't get window object",
                                   Cr.NS_ERROR_UNEXPECTED);
@@ -433,6 +434,7 @@ NfcContentHelper.prototype = {
         }
         break;
       case "NFC:PeerEvent":
+        debug('We have got peer event: ' + result.event);
         switch (result.event) {
           case NFC.NFC_PEER_EVENT_READY:
             this.peerEventListener.notifyPeerReady(result.sessionToken);

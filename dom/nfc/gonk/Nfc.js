@@ -186,29 +186,19 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
     unregisterPeerFoundTarget: function unregisterPeerFoundTarget(message) {
       debug('unregisterPeerFoundTarget, ' + JSON.stringify(message));
 
-      if (this.peerTargetsMap[message.data.aid]) {
+      if (this.peerTargetsMap[message.data.appId]) {
         debug('Removing onpeerfound handler');
-        delete this.peerTargetsMap[message.data.aid];
+        delete this.peerTargetsMap[message.data.appId];
       }
     },
 
     removePeerTarget: function removePeerTarget(target) {
-<<<<<<< HEAD
       Object.keys(this.peerTargets).forEach((appId) => {
         if (this.peerTargets[appId] === target) {
           if (this.currentPeer === target) {
             this.currentPeer = null;
           }
           delete this.peerTargets[appId];
-=======
-      let targets = this.peerTargetsMap;
-      Object.keys(targets).forEach((appId) => {
-        let targetInfo = targets[appId];
-        if (targetInfo && targetInfo.target === target) {
-          // Remove the target from the list of registered targets
-          debug('Removing peer target, appId: ' + appId + ', targetInfo: ' + JSON.stringify(targetInfo));
-          delete targets[appId];
->>>>>>> going up
         }
       });
     },
@@ -265,8 +255,7 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       this.currentPeer = null;
     },
 
-    onPeerFound: function onPeerFound(message) {
-     
+    onPeerFound: function onPeerFound(message) {    
       if (message.records || message.techList.join() !== 'P2P') {
         debug('Not a P2P notification');
         return false;
@@ -282,7 +271,8 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       }
 
       onPeerFoundTargets.forEach((appId) => {
-        debug('sending event to appId: ' + JSON.stringify(appId));
+        debug('sending event to appId: ' + appId);
+        this.currentPeerAppId = appId;
         let targetInfo = this.peerTargetsMap[appId];
         targetInfo.isPeerReadyCalled = true;
         targetInfo.target.sendAsyncMessage("NFC:PeerEvent", {
