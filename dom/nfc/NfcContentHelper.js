@@ -160,7 +160,6 @@ NfcContentHelper.prototype = {
   },
 
   writeNDEF: function writeNDEF(window, records, sessionToken) {
-    debug('trying to write NDEF');
     if (window == null) {
       throw Components.Exception("Can't get window object",
                                   Cr.NS_ERROR_UNEXPECTED);
@@ -281,7 +280,6 @@ NfcContentHelper.prototype = {
   },
 
   registerTargetForPeerFound: function registerTargetForPeerFound(window, appId) {
-    debug('Got register peerfound target');
     if (window == null) {
       throw Components.Exception("Can't get window object",
                                   Cr.NS_ERROR_UNEXPECTED);
@@ -291,7 +289,6 @@ NfcContentHelper.prototype = {
   },
 
   unregisterTargetForPeerFound: function unregisterTargetForPeerFound(window, appId) {
-    debug('Got unregister peerfound target');
     if (window == null) {
       throw Components.Exception("Can't get window object",
                                   Cr.NS_ERROR_UNEXPECTED);
@@ -434,7 +431,6 @@ NfcContentHelper.prototype = {
         }
         break;
       case "NFC:PeerEvent":
-        debug('We have got peer event: ' + result.event);
         switch (result.event) {
           case NFC.NFC_PEER_EVENT_READY:
             this.peerEventListener.notifyPeerReady(result.sessionToken);
@@ -442,7 +438,7 @@ NfcContentHelper.prototype = {
           case NFC.NFC_PEER_EVENT_LOST:
             this.peerEventListener.notifyPeerLost(result.sessionToken);
             break;
-          case 'peerfound':
+          case NFC.NFC_PEER_EVENT_FOUND:
             this.peerEventListener.notifyPeerFound(result.sessionToken);
             break;
         }

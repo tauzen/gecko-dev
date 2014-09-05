@@ -22,8 +22,6 @@ XPCOMUtils.defineLazyServiceGetter(this,
                                    "appsService",
                                    "@mozilla.org/AppsService;1",
                                    "nsIAppsService");
-const NFC_PEER_EVENT_READY = 0x01;
-const NFC_PEER_EVENT_LOST  = 0x02;
 
 /**
  * NFCTag
@@ -97,8 +95,6 @@ MozNFCPeer.prototype = {
 
   // NFCPeer interface:
   sendNDEF: function sendNDEF(records) {
-    debug('We should be here with the proper ndef record');
-    debug(JSON.stringify(records[0]));
     if (this._isLost) {
       throw new this._window.DOMError("InvalidStateError", "NFCPeer object is invalid");
     }
@@ -259,7 +255,6 @@ mozNfc.prototype = {
         this._nfcContentHelper.unregisterTargetForPeerReady(this._window, appId);
         break;
       case 'peerfound':
-        debug('we got onpeerfound removed');
         this._nfcContentHelper.unregisterTargetForPeerFound(this._window, appId);
     }
     
@@ -319,21 +314,6 @@ mozNfc.prototype = {
     debug("fire onpeerlost");
     let event = new this._window.Event("peerlost");
     this.__DOM_IMPL__.dispatchEvent(event);
-  },
-
-  getEventType: function getEventType(evt) {
-    let eventType = -1;
-    switch (evt) {
-      case 'peerready':
-        eventType = NFC_PEER_EVENT_READY;
-        break;
-      case 'peerlost':
-        eventType = NFC_PEER_EVENT_LOST;
-        break;
-      default:
-        break;
-    }
-    return eventType;
   },
 
   hasDeadWrapper: function hasDeadWrapper() {
