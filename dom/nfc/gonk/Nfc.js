@@ -169,16 +169,15 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
     registerPeerFoundTarget: function registerPeerFoundTarget(message) {
       debug('registerPeerFoundTarget, ' + JSON.stringify(message));
       
-      if (this.peerTargetsMap[message.data.appId]) {
+      if (this.peerTargets[message.data.appId]) {
         debug('Already registered handler for onpeerfound/onpeerready, not registering');
         return;
       }
 
       debug('Registering peerfound handler for app:' + message.data.appId);
       debug('target: ' +  JSON.stringify(message.target));
-      this.peerTargetsMap[message.data.appId] = {
+      this.peerTargets[message.data.appId] = {
         target: message.target,
-        isPeerReadyCalled: false,
         type: 'peerfound'
       };
     },
@@ -186,9 +185,9 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
     unregisterPeerFoundTarget: function unregisterPeerFoundTarget(message) {
       debug('unregisterPeerFoundTarget, ' + JSON.stringify(message));
 
-      if (this.peerTargetsMap[message.data.appId]) {
+      if (this.peerTargets[message.data.appId]) {
         debug('Removing onpeerfound handler');
-        delete this.peerTargetsMap[message.data.appId];
+        delete this.peerTargets[message.data.appId];
       }
     },
 
@@ -261,24 +260,21 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
         return false;
       }
 
-      let onPeerFoundTargets = Object.keys(this.peerTargetsMap).filter((appId) => {
-        return this.peerTargetsMap[appId].type === 'peerfound';
+      let appId = Object.keys(this.peerTargets).find((appId) => {
+        return this.peerTargets[appId].type === 'peerfound';
       });
 
-      if(!onPeerFoundTargets.length) {
-        debug('No onpeerfound targets');
+      if(!appId) {
+        debug('no peerfound targets');
         return false;
       }
 
-      onPeerFoundTargets.forEach((appId) => {
-        debug('sending event to appId: ' + appId);
-        this.currentPeerAppId = appId;
-        let targetInfo = this.peerTargetsMap[appId];
-        targetInfo.isPeerReadyCalled = true;
-        targetInfo.target.sendAsyncMessage("NFC:PeerEvent", {
-          event: 'peerfound',
-          sessionToken: message.sessionToken
-        });
+
+      this.currentPeer = this.peerTargets[appId].target;
+      debug('Sending peerfound to appId: '+ appId + ' target: ' + JSON.stringify(this.currentPeer));
+      this.peerTargets[appId].target.sendAsyncMessage("NFC:PeerEvent", {
+        event: 'peerfound',
+        sessionToken: message.sessionToken
       });
 
       return true;
