@@ -24,6 +24,7 @@ XPCOMUtils.defineLazyServiceGetter(this,
                                    "nsIAppsService");
 const NFC_PEER_EVENT_READY = 0x01;
 const NFC_PEER_EVENT_LOST  = 0x02;
+const NFC_PEER_EVENT_FOUND = 0x03;
 
 /**
  * NFCTag
@@ -226,24 +227,40 @@ mozNfc.prototype = {
     this.__DOM_IMPL__.setEventHandler("onpeerlost", handler);
   },
 
+  get onpeerfound() {
+    return this.__DOM_IMPL__.getEventHandler("onpeerfound");
+  },
+
+  set onpeerfound(handler) {
+    this.__DOM_IMPL__.setEventHandler("onpeerfound", handler);
+  },
+
   eventListenerWasAdded: function(evt) {
     let eventType = this.getEventType(evt);
-    if (eventType != NFC_PEER_EVENT_READY) {
-      return;
-    }
-
     let appId = this._window.document.nodePrincipal.appId;
-    this._nfcContentHelper.registerTargetForPeerReady(this._window, appId);
+
+    switch(eventType) {
+      case NFC_PEER_EVENT_READY:
+        this._nfcContentHelper.registerTargetForPeerReady(this._window, appId);
+        break;
+      case NFC_PEER_EVENT_FOUND:
+        this._nfcContentHelper.registerTargetForPeerFound(this._window, appId);
+        break;
+    }
   },
 
   eventListenerWasRemoved: function(evt) {
     let eventType = this.getEventType(evt);
-    if (eventType != NFC_PEER_EVENT_READY) {
-      return;
-    }
-
     let appId = this._window.document.nodePrincipal.appId;
-    this._nfcContentHelper.unregisterTargetForPeerReady(this._window, appId);
+
+    switch(eventType) {
+      case NFC_PEER_EVENT_READY:
+        this._nfcContentHelper.unregisterTargetForPeerReady(this._window, appId);
+        break;
+      case NFC_PEER_EVENT_FOUND:
+        this._nfcContentHelper.unregisterTargetForPeerFound(this._window, appId);
+        break;
+    }
   },
 
   notifyPeerReady: function notifyPeerReady(sessionToken) {
@@ -259,6 +276,22 @@ mozNfc.prototype = {
       "peer":this.getNFCPeer(sessionToken)
     };
     let event = new this._window.MozNFCPeerEvent("peerready", eventData);
+    this.__DOM_IMPL__.dispatchEvent(event);
+  },
+
+  notifyPeerFound: function notifyPeerFound(sessionToken) {
+    if (this.hasDeadWrapper()) {
+      dump("peerFound this._window or this.__DOM_IMPL__ is a dead wrapper.");
+      return;
+    }
+
+    this.session = sessionToken;
+
+    debug("fire onpeerfound sessionToken : " + sessionToken);
+    let eventData = {
+      "peer":this.getNFCPeer(sessionToken)
+    };
+    let event = new this._window.MozNFCPeerEvent("peerfound", eventData);
     this.__DOM_IMPL__.dispatchEvent(event);
   },
 
@@ -294,7 +327,8 @@ mozNfc.prototype = {
       case 'peerlost':
         eventType = NFC_PEER_EVENT_LOST;
         break;
-      default:
+      case 'peerfound':
+        eventType = NFC_PEER_EVENT_FOUND;
         break;
     }
     return eventType;
