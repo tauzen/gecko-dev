@@ -166,28 +166,26 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       }
     },
 
-    registerPeerFoundTarget: function registerPeerFoundTarget(message) {
-      debug('registerPeerFoundTarget, ' + JSON.stringify(message));
+    registerPeerFoundTarget: function registerPeerFoundTarget(target, appId) {
+      debug('Registering peerfound handler for app:' + appId);
       
-      if (this.peerTargets[message.data.appId]) {
+      if (this.peerTargets[appId]) {
         debug('Already registered handler for onpeerfound/onpeerready, not registering');
         return;
       }
 
-      debug('Registering peerfound handler for app:' + message.data.appId);
-      debug('target: ' +  JSON.stringify(message.target));
-      this.peerTargets[message.data.appId] = {
-        target: message.target,
+      this.peerTargets[appId] = {
+        target: target,
         type: 'peerfound'
       };
     },
 
-    unregisterPeerFoundTarget: function unregisterPeerFoundTarget(message) {
-      debug('unregisterPeerFoundTarget, ' + JSON.stringify(message));
+    unregisterPeerFoundTarget: function unregisterPeerFoundTarget(appId) {
+      debug('trying to unregister peerfound target of app: ' +  appId);
 
-      if (this.peerTargets[message.data.appId]) {
+      if (this.peerTargets[appId]) {
         debug('Removing onpeerfound handler');
-        delete this.peerTargets[message.data.appId];
+        delete this.peerTargets[appId];
       }
     },
 
@@ -255,13 +253,16 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
     },
 
     onPeerFound: function onPeerFound(message) {    
-      debug('onpeerfound!');
       if (message.records || message.techList.join() !== 'P2P') {
         debug('Not a P2P notification');
         return false;
       }
 
       let appId = Object.keys(this.peerTargets).find((appId) => {
+        // TODO we need to check here if app is visible, right
+        // now we use first app which registered onpeerfound, asuming that
+        // the app uses |visibiltychange| events to register/unregister
+        // onpeerfound handler
         return this.peerTargets[appId].type === 'peerfound';
       });
 
@@ -270,9 +271,8 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
         return false;
       }
 
-
       this.currentPeer = this.peerTargets[appId].target;
-      debug('Sending peerfound to appId: '+ appId + ' target: ' + JSON.stringify(this.currentPeer));
+      debug('fireing peerfound for app: ' + appId);
       this.peerTargets[appId].target.sendAsyncMessage("NFC:PeerEvent", {
         event: NFC.NFC_PEER_EVENT_FOUND,
         sessionToken: message.sessionToken
@@ -334,12 +334,10 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
           this.unregisterPeerReadyTarget(message.data.appId);
           return null;
         case "NFC:RegisterPeerFoundTarget":
-          debug('nfc.js we got register peerfound');
-          this.registerPeerFoundTarget(message);
+          this.registerPeerFoundTarget(message.target, message.data.appId);
           return null;
         case "NFC:UnregisterPeerFoundTarget":
-          debug('nfc.js we got unregister peerfound');
-          this.unregisterPeerFoundTarget(message);
+          this.unregisterPeerFoundTarget(message.data.appId);
           return null;
         case "NFC:CheckP2PRegistration":
           this.checkP2PRegistration(message);
