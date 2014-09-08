@@ -255,6 +255,7 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
     },
 
     onPeerFound: function onPeerFound(message) {    
+      debug('onpeerfound!');
       if (message.records || message.techList.join() !== 'P2P') {
         debug('Not a P2P notification');
         return false;
@@ -273,7 +274,7 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       this.currentPeer = this.peerTargets[appId].target;
       debug('Sending peerfound to appId: '+ appId + ' target: ' + JSON.stringify(this.currentPeer));
       this.peerTargets[appId].target.sendAsyncMessage("NFC:PeerEvent", {
-        event: 'peerfound',
+        event: NFC.NFC_PEER_EVENT_FOUND,
         sessionToken: message.sessionToken
       });
 
