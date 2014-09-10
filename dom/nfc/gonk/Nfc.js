@@ -65,7 +65,8 @@ const NFC_IPC_WRITE_PERM_MSG_NAMES = [
   "NFC:RegisterPeerReadyTarget",
   "NFC:UnregisterPeerReadyTarget",
   "NFC:RegisterPeerFoundTarget",
-  "NFC:UnregisterPeerFoundTarget"
+  "NFC:UnregisterPeerFoundTarget",
+  "NFC:PeerTargetVisbilityChange"
 ];
 
 const NFC_IPC_MANAGER_PERM_MSG_NAMES = [
@@ -154,6 +155,14 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       ppmm = null;
     },
 
+    logPeerTargets: function logPeerTargets() {
+      if (!DEBUG) return;
+
+      Object.keys(this.peerTargets).forEach((appId) => {
+        debug('app: ' + appId + ' -> ' + JSON.stringify(this.peerTargets[appId]));
+      });
+    },
+
     registerPeerReadyTarget: function registerPeerReadyTarget(target, appId) {
       if (!this.peerTargets[appId]) {
         this.peerTargets[appId] = target;
@@ -167,10 +176,13 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
     },
 
     registerPeerFoundTarget: function registerPeerFoundTarget(target, appId) {
+      debug('registering peerFound, appId: ' + appId);
       if (!this.peerTargets[appId]) {
         // TODO remove |type| together with peerready event handling
-        this.peerTargets[appId] = { target: target, type: 'peerfound' };
+        this.peerTargets[appId] = { target: target, type: 'peerfound', visible: true };
       }
+      debug('after registration');
+      this.logPeerTargets();
     },
 
     unregisterPeerFoundTarget: function unregisterPeerFoundTarget(appId) {
@@ -179,15 +191,28 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       }
     },
 
+    changePeerTargetVisibility: function changePeerTargetVisibility(appId, visible) {
+      if (this.peerTargets[appId]) {
+        debug('switching visbilty of app: ' + appId + ' to: ' + visible);
+        this.peerTargets[appId].visible = visible;
+        this.logPeerTargets();
+      }
+    },
+
     removePeerTarget: function removePeerTarget(target) {
+      debug('Removing peer target');
+      this.logPeerTargets();
       Object.keys(this.peerTargets).forEach((appId) => {
-        if (this.peerTargets[appId] === target) {
+        if (this.peerTargets[appId] && 
+          (this.peerTargets[appId] === target || this.peerTargets[appId].target === target)) {
           if (this.currentPeer === target) {
             this.currentPeer = null;
           }
           delete this.peerTargets[appId];
         }
       });
+      debug('peerTargets after removal');
+      this.logPeerTargets();
     },
 
     notifyPeerEvent: function notifyPeerEvent(target, event, sessionToken) {
@@ -252,10 +277,12 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
         // now we use first app which registered onpeerfound, asuming that
         // the app uses |visibiltychange| events to register/unregister
         // onpeerfound handler
-        return this.peerTargets[appId].type === 'peerfound';
+        return this.peerTargets[appId].type === 'peerfound' && this.peerTargets[appId].visible;
       });
 
+      this.logPeerTargets();
       if(!appId) {
+        debug('did not find a visible peerFound app');
         return false;
       }
 
@@ -326,6 +353,9 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
           return null;
         case "NFC:UnregisterPeerFoundTarget":
           this.unregisterPeerFoundTarget(message.data.appId);
+          return null;
+        case "NFC:PeerTargetVisbilityChange":
+          this.changePeerTargetVisibility(message.data.appId, message.data.visible);
           return null;
         case "NFC:CheckP2PRegistration":
           this.checkP2PRegistration(message);

@@ -6,7 +6,7 @@
 
 "use strict";
 
-const DEBUG = false;
+const DEBUG = true;
 function debug(s) {
   if (DEBUG) dump("-*- Nfc DOM: " + s + "\n");
 }
@@ -238,6 +238,7 @@ mozNfc.prototype = {
   eventListenerWasAdded: function(evt) {
     let eventType = this.getEventType(evt);
     let appId = this._window.document.nodePrincipal.appId;
+    debug('eventListenerWasAdded event: ' + evt + ', appId:' + appId);
 
     switch(eventType) {
       case NFC_PEER_EVENT_READY:
@@ -245,6 +246,12 @@ mozNfc.prototype = {
         break;
       case NFC_PEER_EVENT_FOUND:
         this._nfcContentHelper.registerTargetForPeerFound(this._window, appId);
+        this._boundVisibilityHandler = () => {
+          let appId = this._window.document.nodePrincipal.appId;
+          debug('visibility chaange of app: ' + appId + ', visible: ' + !this._window.document.hidden);
+          this._nfcContentHelper.appVsibilitiChange(this._window, appId);
+        };
+        this._window.document.addEventListener('visibilitychange', this._boundVisibilityHandler);
         break;
     }
   },
@@ -252,6 +259,7 @@ mozNfc.prototype = {
   eventListenerWasRemoved: function(evt) {
     let eventType = this.getEventType(evt);
     let appId = this._window.document.nodePrincipal.appId;
+    debug('eventListenerWasRemoved event: ' + evt + ', appId:' + appId);
 
     switch(eventType) {
       case NFC_PEER_EVENT_READY:
@@ -259,6 +267,7 @@ mozNfc.prototype = {
         break;
       case NFC_PEER_EVENT_FOUND:
         this._nfcContentHelper.unregisterTargetForPeerFound(this._window, appId);
+        this._window.document.removeEventListener('visibilitychange', this._boundVisibilityHandler);
         break;
     }
   },

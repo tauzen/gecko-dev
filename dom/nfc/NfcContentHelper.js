@@ -261,6 +261,16 @@ NfcContentHelper.prototype = {
     this.peerEventListener = listener;
   },
 
+  appVsibilitiChange: function appVsibilitiChange(window, appId) {
+    debug('Got visbility change for app: ' + appId + ' visbile: ' + !window.document.hidden);
+    if (window == null) {
+      throw Components.Exception("Can't get window object",
+                                  Cr.NS_ERROR_UNEXPECTED);
+    }
+
+    cpmm.sendAsyncMessage("NFC:PeerTargetVisbilityChange", { appId: appId, visible: !window.document.hidden });
+  },
+
   registerTargetForPeerReady: function registerTargetForPeerReady(window, appId) {
     if (window == null) {
       throw Components.Exception("Can't get window object",
