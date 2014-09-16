@@ -261,6 +261,15 @@ NfcContentHelper.prototype = {
     this.peerEventListener = listener;
   },
 
+  changePeerTargetVisibility: function changePeerTargetVisibility(window, appId) {
+    if (window == null) {
+      throw Components.Exception("Can't get window object",
+                                  Cr.NS_ERROR_UNEXPECTED);
+    }
+
+    cpmm.sendAsyncMessage("NFC:ChangePeerTargetVisibility", { appId: appId, visible: !window.document.hidden });
+  },
+
   registerTargetForPeerReady: function registerTargetForPeerReady(window, appId) {
     if (window == null) {
       throw Components.Exception("Can't get window object",
@@ -277,6 +286,24 @@ NfcContentHelper.prototype = {
     }
 
     cpmm.sendAsyncMessage("NFC:UnregisterPeerReadyTarget", { appId: appId });
+  },
+
+  registerTargetForPeerFound: function registerTargetForPeerFound(window, appId) {
+    if (window == null) {
+      throw Components.Exception("Can't get window object",
+                                  Cr.NS_ERROR_UNEXPECTED);
+    }
+
+    cpmm.sendAsyncMessage("NFC:RegisterPeerFoundTarget", { appId: appId });
+  },
+
+  unregisterTargetForPeerFound: function unregisterTargetForPeerFound(window, appId) {
+    if (window == null) {
+      throw Components.Exception("Can't get window object",
+                                  Cr.NS_ERROR_UNEXPECTED);
+    }
+
+    cpmm.sendAsyncMessage("NFC:UnregisterPeerFoundTarget", { appId: appId });
   },
 
   checkP2PRegistration: function checkP2PRegistration(window, appId) {
@@ -419,6 +446,9 @@ NfcContentHelper.prototype = {
             break;
           case NFC.NFC_PEER_EVENT_LOST:
             this.peerEventListener.notifyPeerLost(result.sessionToken);
+            break;
+          case NFC.NFC_PEER_EVENT_FOUND:
+            this.peerEventListener.notifyPeerFound(result.sessionToken);
             break;
         }
         break;
