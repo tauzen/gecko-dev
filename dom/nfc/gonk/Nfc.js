@@ -63,7 +63,10 @@ const NFC_IPC_WRITE_PERM_MSG_NAMES = [
   "NFC:MakeReadOnlyNDEF",
   "NFC:SendFile",
   "NFC:RegisterPeerReadyTarget",
-  "NFC:UnregisterPeerReadyTarget"
+  "NFC:UnregisterPeerReadyTarget",
+  "NFC:RegisterPeerFoundTarget",
+  "NFC:UnregisterPeerFoundTarget",
+  "NFC:ChangePeerTargetVisibility"
 ];
 
 const NFC_IPC_MANAGER_PERM_MSG_NAMES = [
@@ -164,9 +167,29 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       }
     },
 
+    registerPeerFoundTarget: function registerPeerFoundTarget(target, appId) {
+      if (!this.peerTargets[appId]) {
+        // TODO remove |type| together with peerready event handling
+        this.peerTargets[appId] = { target: target, type: 'peerfound', visible: true };
+      }
+    },
+
+    unregisterPeerFoundTarget: function unregisterPeerFoundTarget(appId) {
+      if (this.peerTargets[appId]) {
+        delete this.peerTargets[appId];
+      }
+    },
+
+    changePeerTargetVisibility: function changePeerTargetVisibility(appId, visible) {
+      if (this.peerTargets[appId]) {
+        this.peerTargets[appId].visible = visible;
+      }
+    },
+
     removePeerTarget: function removePeerTarget(target) {
       Object.keys(this.peerTargets).forEach((appId) => {
-        if (this.peerTargets[appId] === target) {
+        if (this.peerTargets[appId] &&
+            (this.peerTargets[appId] === target || this.peerTargets[appId].target === target)) {
           if (this.currentPeer === target) {
             this.currentPeer = null;
           }
@@ -227,6 +250,28 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       this.currentPeer = null;
     },
 
+    onPeerFound: function onPeerFound(message) {
+      if (message.records || message.techList.join() !== 'P2P') {
+        return false;
+      }
+
+      let appId = Object.keys(this.peerTargets).find((appId) => {
+        return this.peerTargets[appId].type === 'peerfound' && this.peerTargets[appId].visible;
+      });
+
+      if(!appId) {
+        return false;
+      }
+
+      this.currentPeer = this.peerTargets[appId].target;
+      this.peerTargets[appId].target.sendAsyncMessage("NFC:PeerEvent", {
+        event: NFC.NFC_PEER_EVENT_FOUND,
+        sessionToken: message.sessionToken
+      });
+
+      return true;
+    },
+
     /**
      * nsIMessageListener interface methods.
      */
@@ -278,6 +323,15 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
           return null;
         case "NFC:UnregisterPeerReadyTarget":
           this.unregisterPeerReadyTarget(message.data.appId);
+          return null;
+        case "NFC:RegisterPeerFoundTarget":
+          this.registerPeerFoundTarget(message.target, message.data.appId);
+          return null;
+        case "NFC:UnregisterPeerFoundTarget":
+          this.unregisterPeerFoundTarget(message.data.appId);
+          return null;
+        case "NFC:ChangePeerTargetVisibility":
+          this.changePeerTargetVisibility(message.data.appId, message.data.visible);
           return null;
         case "NFC:CheckP2PRegistration":
           this.checkP2PRegistration(message);
@@ -424,7 +478,11 @@ Nfc.prototype = {
         // Do not expose the actual session to the content
         delete message.sessionId;
 
-        gSystemMessenger.broadcastMessage("nfc-manager-tech-discovered", message);
+        // checking if message is P2P notification and if onpeerfound can be fired,
+        // if not we send the system message to NfcManager to handle it in gaia
+        if (!gMessageManager.onPeerFound(message)) {
+          gSystemMessenger.broadcastMessage("nfc-manager-tech-discovered", message);
+        }
         break;
       case "TechLostNotification":
         message.type = "techLost";
