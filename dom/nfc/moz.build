@@ -5,6 +5,8 @@
 #
 # Copyright © 2013 Deutsche Telekom, Inc.
 
+XPCSHELL_TESTS_MANIFESTS += ['tests/unit/xpcshell.ini']
+
 XPIDL_MODULE = 'dom_nfc'
 
 if CONFIG['MOZ_NFC']:
