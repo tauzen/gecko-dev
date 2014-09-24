@@ -25,13 +25,25 @@ function run_test() {
   run_next_test();
 }
 
-add_test(function test_shouldDispatch() {
+add_test(function test_shouldDispatch_no_message() {
   var dispatch = HCIEventTransactionSystemMessageConfigurator
   .shouldDispatch(MANIFEST_URL, PAGE_URL, TYPE, null, EXTRA);
   do_print(typeof dispatch);
 
   dispatch.then((result) => {
     ok(!result, 'Should be false without message');
+    run_next_test();
+  });
+});
+
+add_test(function test_shouldDispatch_valid_message() {
+  // need to somehow mockup AppsService.getManifestFor
+  var dispatch = HCIEventTransactionSystemMessageConfigurator
+  .shouldDispatch(MANIFEST_URL, PAGE_URL, TYPE, {aid: new Uint8Array([1]), seName: 'SIM0'}, EXTRA);
+  do_print(typeof dispatch);
+
+  dispatch.then((result) => {
+    ok(result, 'Should be truee');
     run_next_test();
   });
 });
