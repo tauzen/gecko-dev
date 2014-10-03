@@ -7,16 +7,17 @@
 
 interface nsIVariant;
 
-[scriptable, uuid(e81cc1ac-6f0b-4581-a9fb-7ee47ed0158e)]
+[scriptable, uuid(20beb11b-17a3-4b78-a5bf-126b6d216c9b)]
 interface nsINfcDOMEventTarget : nsISupports
 {
   /**
-   * Callback function used to notify peerready.
-   *
+   * Callback function used to notify peerfound/peerready.
    * @param sessionToken
    *        SessionToken received from Chrome process
+   * @param isPeerReady
+   *        Set to true to dispatch peerready instead of peerfound
    */
-   void notifyPeerReady(in DOMString sessionToken);
+   void notifyPeerFound(in DOMString sessionToken, [optional] in boolean isPeerReady);
 
   /**
    * Callback function used to notify peerlost.
