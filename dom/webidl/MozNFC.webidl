@@ -72,6 +72,13 @@ interface MozNFC : EventTarget {
    attribute EventHandler onpeerready;
    [CheckPermissions="nfc-write"]
    attribute EventHandler onpeerlost;
+
+   /**
+    * This event will be fired when NFCPeer is detected. No confirmation from user
+    * is required. Type of this event will be NFCPeerEvent.
+    */
+   [CheckPermissions="nfc-write"]
+   attribute EventHandler onpeerfound;
 };
 
 // Mozilla Only

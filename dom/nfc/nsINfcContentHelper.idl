@@ -7,7 +7,7 @@
 
 interface nsIVariant;
 
-[scriptable, uuid(e81cc1ac-6f0b-4581-a9fb-7ee47ed0158e)]
+[scriptable, uuid(fa427a19-ef29-4fb4-a8e4-03e6a40933ed)]
 interface nsINfcDOMEventTarget : nsISupports
 {
   /**
@@ -25,6 +25,13 @@ interface nsINfcDOMEventTarget : nsISupports
    *        SessionToken received from Chrome process
    */
    void notifyPeerLost(in DOMString sessionToken);
+
+  /**
+   * Callback function used to notify peerfound.
+   * @param sessionToken
+   *        SessionToken received from Chrome process
+   */
+   void notifyPeerFound(in DOMString sessionToken);
 };
 
 [scriptable, uuid(cb9c934d-a7fa-422b-bcc1-4ac39741e6ec)]
@@ -69,8 +76,9 @@ interface nsINfcContentHelper : nsISupports
    * Register the event target.
    *
    * @param target  An instance of the nsINfcDOMEventTarget.
+   * @param eventHelper  Helper object used to check visibility and event registration status
    */
-  void registerEventTarget(in nsINfcDOMEventTarget target);
+  void registerEventTarget(in nsINfcDOMEventTarget target, in jsval eventHelper);
 
  /**
   * Register the given application id with Chrome process
