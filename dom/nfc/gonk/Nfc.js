@@ -197,18 +197,21 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       target.sendAsyncMessage("NFC:DOMEvent", options);
     },
 
-    addEventTarget: function addEventTarget(target) {
-      if (this.eventTargets.indexOf(target) != -1) {
+    addEventTarget: function addEventTarget(targetWrapper) {
+      if (this.eventTargets.indexOf(targetWrapper) != -1) {
         return;
       }
 
-      this.eventTargets.push(target);
+      this.eventTargets.push(targetWrapper);
     },
 
     removeEventTarget: function removeEventTarget(target) {
-      let index = this.eventTargets.indexOf(target);
+      let index = this.eventTargets.findIndex((wrapper) => {
+        return wrapper.target === target;
+      });
+
       if (index != -1) {
-        delete this.eventTargets[index];
+        this.eventTargets.splice(index,1);
       }
     },
 
@@ -250,6 +253,21 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       this.notifyDOMEvent(this.currentPeer, {event: NFC.NFC_PEER_EVENT_LOST,
                                              sessionToken: sessionToken});
       this.currentPeer = null;
+    },
+
+    onPeerFound: function onPeerFound(sessionToken) {
+      let targetWrapper = this.eventTargets.find((wrapper) => {
+        return wrapper.eventHelper.isVisibile() && wrapper.eventHelper.isPeerfoundRegistered();
+      });
+
+      if(targetWrapper && targetWrapper.target) {
+        this.currentPeer = targetWrapper.target;
+        this.notifyDOMEvent(this.currentPeer, {event: NFC.NFC_PEER_EVENT_FOUND,
+                                               sessionToken: sessionToken});
+        return true;
+      }
+
+      return false;
     },
 
     /**
@@ -294,7 +312,7 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
 
       switch (message.name) {
         case "NFC:AddEventTarget":
-          this.addEventTarget(message.target);
+          this.addEventTarget({target: message.target, eventHelper: message.objects.eventHelper });
           return null;
         case "NFC:CheckSessionToken":
           if (!SessionHelper.isValidToken(message.data.sessionToken)) {
@@ -505,10 +523,13 @@ Nfc.prototype = {
         message.sessionToken =
           SessionHelper.registerSession(message.sessionId, message.techList);
 
-        // Do not expose the actual session to the content
-        delete message.sessionId;
-
-        gSystemMessenger.broadcastMessage("nfc-manager-tech-discovered", message);
+        // checking if message is P2P notification and if onpeerfound can be fired,
+        // if not we send the system message to NfcManager to handle it in gaia
+        if (!SessionHelper.isP2PSession(message.sessionId) || !gMessageManager.onPeerFound(message.sessionToken)) {
+          // Do not expose the actual session to the content
+          delete message.sessionId;
+          gSystemMessenger.broadcastMessage("nfc-manager-tech-discovered", message);
+        }
         break;
       case "TechLostNotification":
         message.type = "techLost";

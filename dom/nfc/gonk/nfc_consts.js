@@ -16,7 +16,7 @@
 /* Copyright © 2013, Deutsche Telekom, Inc. */
 
 // Set to true to debug all NFC layers
-this.DEBUG_ALL = false;
+this.DEBUG_ALL = true;
 
 // Set individually to debug specific layers
 this.DEBUG_CONTENT_HELPER = false || DEBUG_ALL;
@@ -109,6 +109,7 @@ this.TOPIC_XPCOM_SHUTDOWN           = "xpcom-shutdown";
 
 this.NFC_PEER_EVENT_READY = 0x01;
 this.NFC_PEER_EVENT_LOST  = 0x02;
+this.NFC_PEER_EVENT_FOUND = 0x03;
 
 // Allow this file to be imported via Components.utils.import().
 this.EXPORTED_SYMBOLS = Object.keys(this);

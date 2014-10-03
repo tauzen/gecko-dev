@@ -229,9 +229,9 @@ NfcContentHelper.prototype = {
     });
   },
 
-  registerEventTarget: function registerEventTarget(target) {
+  registerEventTarget: function registerEventTarget(target, eventHelper) {
     this.eventTarget = target;
-    cpmm.sendAsyncMessage("NFC:AddEventTarget");
+    cpmm.sendAsyncMessage("NFC:AddEventTarget", {}, {eventHelper: eventHelper});
   },
 
   registerTargetForPeerReady: function registerTargetForPeerReady(window, appId) {
@@ -389,6 +389,9 @@ NfcContentHelper.prototype = {
             break;
           case NFC.NFC_PEER_EVENT_LOST:
             this.eventTarget.notifyPeerLost(result.sessionToken);
+            break;
+          case NFC.NFC_PEER_EVENT_FOUND:
+            this.eventTarget.notifyPeerFound(result.sessionToken);
             break;
         }
         break;

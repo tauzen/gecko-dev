@@ -6,7 +6,7 @@
 
 "use strict";
 
-const DEBUG = false;
+const DEBUG = true;
 function debug(s) {
   if (DEBUG) dump("-*- Nfc DOM: " + s + "\n");
 }
@@ -137,17 +137,26 @@ function mozNfc() {
   } catch(e) {
     debug("No NFC support.")
   }
-
-  this._nfcContentHelper.registerEventTarget(this);
 }
 mozNfc.prototype = {
   _nfcContentHelper: null,
   _window: null,
   nfcObject: null,
 
+  _eventHelper: null,
+  _peerfoundRegistered: false,
+  _tagfoundRegistered: false,
+
   init: function init(aWindow) {
     debug("mozNfc init called");
     this._window = aWindow;
+
+    this._eventHelper = {
+      isVisibile: () => { return (this._window) ? !this._window.document.hidden : false; },
+      isPeerfoundRegistered: () => { return this._peerfoundRegistered; },
+      isTagfoundRegistered: () => { return this._tagfoundRegistered; },
+    };
+    this._nfcContentHelper.registerEventTarget(this, this._eventHelper);
   },
 
   // Only apps which have nfc-manager permission can call the following interfaces
@@ -224,22 +233,40 @@ mozNfc.prototype = {
     this.__DOM_IMPL__.setEventHandler("onpeerlost", handler);
   },
 
-  eventListenerWasAdded: function(eventType) {
-    if (eventType !== "peerready") {
-      return;
-    }
+  get onpeerfound() {
+    return this.__DOM_IMPL__.getEventHandler("onpeerfound");
+  },
 
+  set onpeerfound(handler) {
+    this.__DOM_IMPL__.setEventHandler("onpeerfound", handler);
+  },
+
+  eventListenerWasAdded: function(eventType) {
     let appId = this._window.document.nodePrincipal.appId;
-    this._nfcContentHelper.registerTargetForPeerReady(this._window, appId);
+    debug('eventListenerWasAdded event: ' + eventType + ', appId:' + appId);
+
+    switch(eventType) {
+      case 'peerready':
+        this._nfcContentHelper.registerTargetForPeerReady(this._window, appId);
+        break;
+      case 'peerfound':
+        this._peerfoundRegistered = true;
+        break;
+    }
   },
 
   eventListenerWasRemoved: function(eventType) {
-    if (eventType !== "peerready") {
-      return;
-    }
-
     let appId = this._window.document.nodePrincipal.appId;
-    this._nfcContentHelper.unregisterTargetForPeerReady(this._window, appId);
+    debug('eventListenerWasRemoved event: ' + eventType + ', appId:' + appId);
+
+    switch(eventType) {
+      case 'peerready':
+        this._nfcContentHelper.unregisterTargetForPeerReady(this._window, appId);
+        break;
+      case 'peerfound':
+        this._peerfoundRegistered = false;
+        break;
+    }
   },
 
   notifyPeerReady: function notifyPeerReady(sessionToken) {
@@ -255,6 +282,22 @@ mozNfc.prototype = {
       "peer":this.getNFCPeer(sessionToken)
     };
     let event = new this._window.MozNFCPeerEvent("peerready", eventData);
+    this.__DOM_IMPL__.dispatchEvent(event);
+  },
+
+  notifyPeerFound: function notifyPeerFound(sessionToken) {
+    if (this.hasDeadWrapper()) {
+      dump("peerFound this._window or this.__DOM_IMPL__ is a dead wrapper.");
+      return;
+    }
+
+    this.session = sessionToken;
+
+    debug("fire onpeerfound sessionToken : " + sessionToken);
+    let eventData = {
+      "peer":this.getNFCPeer(sessionToken)
+    };
+    let event = new this._window.MozNFCPeerEvent("peerfound", eventData);
     this.__DOM_IMPL__.dispatchEvent(event);
   },
 
