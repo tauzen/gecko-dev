@@ -229,9 +229,9 @@ NfcContentHelper.prototype = {
     });
   },
 
-  registerEventTarget: function registerEventTarget(target, eventHelper) {
+  registerEventTarget: function registerEventTarget(target) {
     this.eventTarget = target;
-    cpmm.sendAsyncMessage("NFC:AddEventTarget", {}, {eventHelper: eventHelper});
+    cpmm.sendAsyncMessage("NFC:AddEventTarget");
   },
 
   registerTargetForPeerReady: function registerTargetForPeerReady(window, appId) {
