@@ -30,8 +30,10 @@ interface nsINfcDOMEventTarget : nsISupports
    * Callback function used to notify peerfound.
    * @param sessionToken
    *        SessionToken received from Chrome process
+   * @param eventStatus
+   *        Helper object used to notify parent process if the event is fired or rejected
    */
-   void notifyPeerFound(in DOMString sessionToken);
+   void notifyPeerFound(in DOMString sessionToken, in jsval eventStatus);
 };
 
 [scriptable, uuid(758b9435-551a-4382-afcc-2978d01fe900)]
@@ -74,9 +76,8 @@ interface nsINfcContentHelper : nsISupports
    * Register the event target.
    *
    * @param target  An instance of the nsINfcDOMEventTarget.
-   * @param eventHelper  Helper object used to check visibility and event registration status
    */
-  void registerEventTarget(in nsINfcDOMEventTarget target, in jsval eventHelper);
+  void registerEventTarget(in nsINfcDOMEventTarget target);
 
  /**
   * Register the given application id with Chrome process

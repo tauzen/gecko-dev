@@ -391,7 +391,7 @@ NfcContentHelper.prototype = {
             this.eventTarget.notifyPeerLost(result.sessionToken);
             break;
           case NFC.NFC_PEER_EVENT_FOUND:
-            this.eventTarget.notifyPeerFound(result.sessionToken);
+            this.eventTarget.notifyPeerFound(result.sessionToken, message.objects.eventStatus);
             break;
         }
         break;

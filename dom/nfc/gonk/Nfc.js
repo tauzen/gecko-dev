@@ -21,6 +21,7 @@ const {classes: Cc, interfaces: Ci, utils: Cu, results: Cr} = Components;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("resource://gre/modules/Promise.jsm");
 
 XPCOMUtils.defineLazyGetter(this, "NFC", function () {
   let obj = {};
@@ -188,29 +189,26 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       });
     },
 
-    notifyDOMEvent: function notifyDOMEvent(target, options) {
+    notifyDOMEvent: function notifyDOMEvent(target, options, objects) {
       if (!target) {
         dump("invalid target");
         return;
       }
 
-      target.sendAsyncMessage("NFC:DOMEvent", options);
+      target.sendAsyncMessage("NFC:DOMEvent", options, objects);
     },
 
-    addEventTarget: function addEventTarget(targetWrapper) {
-      if (this.eventTargets.indexOf(targetWrapper) != -1) {
+    addEventTarget: function addEventTarget(target) {
+      if (this.eventTargets.indexOf(target) != -1) {
         return;
       }
 
-      this.eventTargets.push(targetWrapper);
+      this.eventTargets.push(target);
     },
 
     removeEventTarget: function removeEventTarget(target) {
-      let index = this.eventTargets.findIndex((wrapper) => {
-        return wrapper.target === target;
-      });
-
-      if (index != -1) {
+      let index = this.eventTargets.indexOf(target);
+      if (index !== -1) {
         this.eventTargets.splice(index,1);
       }
     },
@@ -255,19 +253,31 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
       this.currentPeer = null;
     },
 
-    onPeerFound: function onPeerFound(sessionToken) {
-      let targetWrapper = this.eventTargets.find((wrapper) => {
-        return wrapper.eventHelper.isVisibile() && wrapper.eventHelper.isPeerfoundRegistered();
+    onPeerFound: function onPeerFound(message) {
+      let promises = this.eventTargets.map((target) => {
+        return new Promise((resolve, reject) => {
+          let eventStatus = {
+            ignored: () => { resolve(false); },
+            dispatched: () => { resolve(true); this.currentPeer = target; }
+          };
+          let options = { 
+            event: NFC.NFC_PEER_EVENT_FOUND,
+            sessionToken: message.sessionToken 
+          };
+          this.notifyDOMEvent(target, options, { eventStatus: eventStatus });
+        });
       });
 
-      if(targetWrapper && targetWrapper.target) {
-        this.currentPeer = targetWrapper.target;
-        this.notifyDOMEvent(this.currentPeer, {event: NFC.NFC_PEER_EVENT_FOUND,
-                                               sessionToken: sessionToken});
-        return true;
-      }
+      Promise.all(promises).then((results) => {
+        let eventFired = results.find((fired) => {
+          return fired;
+        });
 
-      return false;
+        if (!eventFired) {
+          delete message.sessionId;
+          this.broadcastMessage("nfc-manager-tech-discovered", message);
+        }
+      });
     },
 
     /**
@@ -312,7 +322,7 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
 
       switch (message.name) {
         case "NFC:AddEventTarget":
-          this.addEventTarget({target: message.target, eventHelper: message.objects.eventHelper });
+          this.addEventTarget(message.target);
           return null;
         case "NFC:CheckSessionToken":
           if (!SessionHelper.isValidToken(message.data.sessionToken)) {
@@ -525,10 +535,12 @@ Nfc.prototype = {
 
         // checking if message is P2P notification and if onpeerfound can be fired,
         // if not we send the system message to NfcManager to handle it in gaia
-        if (!SessionHelper.isP2PSession(message.sessionId) || !gMessageManager.onPeerFound(message.sessionToken)) {
+        if (!SessionHelper.isP2PSession(message.sessionId)) {
           // Do not expose the actual session to the content
           delete message.sessionId;
           gSystemMessenger.broadcastMessage("nfc-manager-tech-discovered", message);
+        } else {
+          gSystemMessenger.onPeerFound(message);
         }
         break;
       case "TechLostNotification":
