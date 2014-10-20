@@ -139,12 +139,7 @@ mozNfc.prototype = {
       this._nfcContentHelper.init(aWindow);
     }
 
-    this._eventHelper = {
-      isVisibile: () => { return (this._window) ? !this._window.document.hidden : false; },
-      isPeerfoundRegistered: () => { return this._peerfoundRegistered; },
-      isTagfoundRegistered: () => { return this._tagfoundRegistered; },
-    };
-    this._nfcContentHelper.registerEventTarget(this, this._eventHelper);
+    this._nfcContentHelper.registerEventTarget(this);
   },
 
   // Only apps which have nfc-manager permission can call the following interfaces
@@ -273,9 +268,15 @@ mozNfc.prototype = {
     this.__DOM_IMPL__.dispatchEvent(event);
   },
 
-  notifyPeerFound: function notifyPeerFound(sessionToken) {
+  notifyPeerFound: function notifyPeerFound(sessionToken, eventStatus) {
     if (this.hasDeadWrapper()) {
       dump("peerFound this._window or this.__DOM_IMPL__ is a dead wrapper.");
+      eventStatus.ignored();
+      return;
+    }
+
+    if (!this._peerfoundRegistered || this._window.document.hidden) {
+      eventStatus.ignored;
       return;
     }
 
@@ -287,6 +288,7 @@ mozNfc.prototype = {
     };
     let event = new this._window.MozNFCPeerEvent("peerfound", eventData);
     this.__DOM_IMPL__.dispatchEvent(event);
+    eventStatus.dispatched();
   },
 
   notifyPeerLost: function notifyPeerLost(sessionToken) {
