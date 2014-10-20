@@ -272,9 +272,9 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
             ignored: () => { resolve(false); },
             dispatched: () => { resolve(true); this.currentPeer = target; }
           };
-          let options = { 
+          let options = {
             event: NFC.NFC_PEER_EVENT_FOUND,
-            sessionToken: message.sessionToken 
+            sessionToken: message.sessionToken
           };
           this.notifyDOMEvent(target, options, { eventStatus: eventStatus });
         });

@@ -121,25 +121,23 @@ function mozNfc() {
   } catch(e) {
     debug("No NFC support.")
   }
+
+  this._nfcContentHelper.registerEventTarget(this);
 }
 mozNfc.prototype = {
   _nfcContentHelper: null,
   _window: null,
   nfcObject: null,
 
-  _eventHelper: null,
   _peerfoundRegistered: false,
   _tagfoundRegistered: false,
 
   init: function init(aWindow) {
     debug("mozNfc init called");
     this._window = aWindow;
-
     if (this._nfcContentHelper) {
       this._nfcContentHelper.init(aWindow);
     }
-
-    this._nfcContentHelper.registerEventTarget(this);
   },
 
   // Only apps which have nfc-manager permission can call the following interfaces
@@ -276,7 +274,7 @@ mozNfc.prototype = {
     }
 
     if (!this._peerfoundRegistered || this._window.document.hidden) {
-      eventStatus.ignored;
+      eventStatus.ignored();
       return;
     }
 
