@@ -4553,3 +4553,8 @@ pref("reader.has_used_toolbar", false);
 // loaded without sandboxing even if this pref is changed.
 pref("media.gmp.insecure.allow", false);
 #endif
+
+// Secure Element API
+#ifdef MOZ_SECUREELEMENT
+pref("dom.secureelement.enabled", false);
+#endif
