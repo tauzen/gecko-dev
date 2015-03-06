@@ -579,8 +579,12 @@
 @RESPATH@/components/NfcContentHelper.js
 #endif
 #ifdef MOZ_SECUREELEMENT
+@BINPATH@/components/ACEService.manifest
+@BINPATH@/components/ACEService.js
 @RESPATH@/components/DOMSecureElement.manifest
 @RESPATH@/components/DOMSecureElement.js
+@BINPATH@/components/GPAccessRulesManager.manifest
+@BINPATH@/components/GPAccessRulesManager.js
 #endif
 #ifdef MOZ_ENABLE_DBUS
 @RESPATH@/components/@DLL_PREFIX@dbusservice@DLL_SUFFIX@
