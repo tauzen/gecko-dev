@@ -33,6 +33,28 @@ this.SEUtils = {
     return array;
   },
 
+  hexStringToUint8Array: function hexStringToByteArray(hexStr) {
+    if (typeof hexStr !== "string" || hexStr.length % 2 !== 0) {
+      return [];
+    }
+
+    let array = new Uint8Array(hexStr.length/2);
+    for (let i = 0, len = array.length; i < len; i++) {
+      array[i] = parseInt(hexStr.substr(i*2, 2), 16);
+    }
+
+    return array;
+  },
+
+  stringToUint8Array: function stringToByteArray(str) {
+    let array = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) {
+      array[i] = str.charCodeAt(i);
+    }
+
+    return array;
+  },
+
   arraysEqual: function arraysEqual(a1, a2) {
     if (!a1 || !a2) {
       return false;

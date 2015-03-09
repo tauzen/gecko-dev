@@ -9,6 +9,8 @@
 const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Promise.jsm");
+Cu.import("resource://gre/modules/FileUtils.jsm");
+Cu.import("resource://gre/modules/NetUtil.jsm");
 
 XPCOMUtils.defineLazyModuleGetter(this, "DOMApplicationRegistry",
                                   "resource://gre/modules/Webapps.jsm");
@@ -115,34 +117,13 @@ ACEService.prototype = {
     return new Promise((resolve, reject) => {
       debug("isAccessAllowed for " + manifestURL + " to " + aid);
 
-      this._getDevCertHashForApp(manifestURL).then((certHash) => {
-        if (!certHash) {
-          debug("App " + manifestURL + " tried to access SE, but no developer" +
+      let devCert = this._getDevCertForApp(manifestURL);
+
+      if (!devCert) {
+        debug("App " + manifestURL + " tried to access SE, but no developer" +
                 " certificate present");
-          return reject(Error("No developer certificate found"));
-        }
-
-        let rulesManager = this._rulesManagers.get(seType);
-        if (!rulesManager) {
-          debug("App " + manifestURL + " tried to access '" + seType + "' SE" +
-                " which is not supported.");
-          return reject(Error("SE type '" + seType + "' not supported"));
-        }
-
-        rulesManager.getAccessRules().then((rules) => {
-          let decision = new GPAccessDecision(rules,
-            SEUtils.hexStringToByteArray(certHash), aid);
-
-          resolve(decision.isAccessAllowed());
-        });
-      });
-    });
-  },
-
-  _getDevCertHashForApp: function getDevCertHashForApp(manifestURL) {
-    return DOMApplicationRegistry.getManifestFor(manifestURL)
-    .then((manifest) => {
-      DEBUG && debug("manifest retrieved: " + JSON.stringify(manifest));
+        return reject(new Error("No developer certificate found"));
+      }
 
       // TODO: Bug 973823
       //  - verify if app is signed by marketplace
@@ -151,12 +132,104 @@ ACEService.prototype = {
       //  - compute the hash of the cert and possibly store it for future use
       //    (right now we have the cert hash included in manifest file)
       //  - remove this once we have fixed all the todos
-      return manifest.secure_element_sig || "";
-    })
-    .catch((error) => {
-      debug("Not able to retrieve cert hash: " + error);
-      return "";
+      //return manifest.secure_element_sig || "";
+      return DOMApplicationRegistry.getManifestFor(manifestURL)
+      .then((manifest) => {
+        let aid_sig = SEUtils.hexStringToUint8Array(manifest.aid_sig);
+        let aid = SEUtils.hexStringToUint8Array(aid);
+        return this._checkSignature(devCert, aid_sig, aid);
+      })
+      .then((isSigValid) => {
+         if (isSigValid) {
+           return this._getSha1(cert);
+         } else {
+           return reject(new Error("App signature verification failed."))
+         }
+      })
+      .then((certHash) => {
+        if (!certHash) {
+          return reject(new Error("No valid developer hash found"));
+        }
+
+        let rulesManager = this._rulesManagers.get(seType);
+        if (!rulesManager) {
+          debug("App " + manifestURL + " tried to access '" + seType + "' SE" +
+                " which is not supported.");
+          return reject(new Error("SE type '" + seType + "' not supported"));
+        }
+
+        rulesManager.getAccessRules()
+        .then((rules) => {
+          let decision = new GPAccessDecision(rules, certHash, aid);
+          resolve(decision.isAccessAllowed());
+        });
+      });
     });
+
+  },
+
+  _getDevCertForApp: function _getDevCertForApp(manifestURL) {
+    let app = DOMApplicationRegistry.getAppByManifestURL(manifestURL);
+
+    if (!app) {
+      throw Error("App not found.");
+    }
+    let appDir = null;
+    // Pre-installed apps (if Non-engr builds)
+    appDir = FileUtils.getDir("coreAppsDir", ["webapps", app.id], false, true);
+    if (!appDir.exists()) {
+      // Location for other apps, including Engr builds:
+      appDir = FileUtils.getDir("webappsDir", ["webapps", app.id], false, true);
+    }
+
+    let appPackage = appDir.clone();
+    appPackage.append("application.zip");
+
+    let zipReader = Cc["@mozilla.org/libjar/zip-reader;1"]
+      .createInstance(Ci.nsIZipReader);
+    zipReader.open(appPackage);
+
+    debug('has file: ' + zipReader.hasEntry("dev_cert.cer"));
+    let devCertStream = zipReader.getInputStream("dev_cert.cer");
+    let devCert = NetUtil.readInputStreamToString(devCertStream, devCertStream.available());
+    devCert = SEUtils.hexStringToUint8Array(devCert);
+    devCertStream.close();
+    return devCert;
+  },
+
+  _checkSignature: function _checkSignature(devCert, aid_sig, aid) {
+    let browserWindow = Services.wm.getMostRecentWindow("navigator:browser");
+    let crypto = browserWindow.crypto;
+    if (!crypto) {
+      return Promise.reject(new Error("Browser is missing crypto support"));
+    }
+    if (!(devCert instanceof Uint8Array) ||
+        !(aid_sig instanceof Uint8Array) ||
+        !(aid instanceof Uint8Array)) {
+      return Promise.reject(new Error("Certificate, guid signature, and guid" +
+                            "all must be instances of Uint8Array"));
+    }
+
+    let alg = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-1" };
+    return crypto.subtle.importKey("spki", devCert, alg, false, ['verify'])
+      .then((cryptoKey) => {
+        return crypto.subtle.verify(alg.name, cryptoKey, aid_sig, aid);
+      });
+  },
+
+  _getSha1: function _getSha1(devCert) {
+    let browserWindow = Services.wm.getMostRecentWindow("navigator:browser");
+    let crypto = browserWindow.crypto;
+    if (!(devCert instanceof Uint8Array)) {
+      return Promise.reject(
+        new Error("Certificate must be an instance of Uint8Array"));
+    }
+
+    return crypto.subtle.digest("SHA-1", devCert)
+    .then(function(arrayBuffer) {
+      debug("Got Sha1: " + JSON.stringify(new Uint8Array(arrayBuffer)));
+      return new Uint8Array(arrayBuffer);
+    })
   },
 
   classID: Components.ID("{882a7463-2ca7-4d61-a89a-10eb6fd70478}"),
