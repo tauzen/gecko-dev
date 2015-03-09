@@ -7,10 +7,10 @@
 "use strict";
 
 
-const DEBUG = false;
+const DEBUG = true;
 function debug(msg) {
   if (DEBUG) {
-    dump("ACEservice: " + msg + "\n");
+    dump("secure:ACEservice: " + msg + "\n");
   }
 }
 
@@ -145,7 +145,7 @@ ACEService.prototype = {
       DEBUG && debug("manifest retrieved: " + JSON.stringify(manifest));
 
       // TODO: Bug 973823
-      //  - verify if app is signed by marketplace
+      //  - verify if app is signed by marketplace -> not needed see e-mail from Stephanie
       //  - retrieve the cert from the app
       //  - verify GUID signature
       //  - compute the hash of the cert and possibly store it for future use

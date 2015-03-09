@@ -7,10 +7,10 @@
 "use strict";
 
 
-let DEBUG = false;
+let DEBUG = true;
 function debug(msg) {
   if (DEBUG) {
-    dump("-*- GPAccessRulesManager " + msg);
+    dump("-*- secure:GPAccessRulesManager " + msg);
   }
 }
 
