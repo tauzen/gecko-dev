@@ -431,6 +431,10 @@
 @RESPATH@/components/PresentationDeviceInfoManager.manifest
 @RESPATH@/components/PresentationDeviceInfoManager.js
 #ifdef MOZ_SECUREELEMENT
+@RESPATH@/components/ACEService.js
+@RESPATH@/components/ACEService.manifest
+@RESPATH@/components/GPAccessRulesManager.js
+@RESPATH@/components/GPAccessRulesManager.manifest
 @RESPATH@/components/SecureElement.js
 @RESPATH@/components/SecureElement.manifest
 @RESPATH@/components/UiccConnector.js
