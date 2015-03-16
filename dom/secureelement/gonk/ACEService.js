@@ -11,6 +11,7 @@ Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Promise.jsm");
 Cu.import("resource://gre/modules/FileUtils.jsm");
 Cu.import("resource://gre/modules/NetUtil.jsm");
+Cu.import("resource://gre/modules/Services.jsm");
 
 XPCOMUtils.defineLazyModuleGetter(this, "DOMApplicationRegistry",
                                   "resource://gre/modules/Webapps.jsm");
@@ -135,9 +136,10 @@ ACEService.prototype = {
       //return manifest.secure_element_sig || "";
       return DOMApplicationRegistry.getManifestFor(manifestURL)
       .then((manifest) => {
-        let aid_sig = SEUtils.hexStringToUint8Array(manifest.aid_sig);
-        let aid = SEUtils.hexStringToUint8Array(aid);
-        return this._checkSignature(devCert, aid_sig, aid);
+        debug('manifest: ' + JSON.stringify(manifest));
+        let guid_sig = SEUtils.hexStringToUint8Array(manifest.guid_sig);
+        let guid = SEUtils.hexStringToUint8Array(manifest.guid);
+        return this._checkSignature(devCert, guid_sig, guid);
       })
       .then((isSigValid) => {
          if (isSigValid) {
@@ -163,6 +165,10 @@ ACEService.prototype = {
           let decision = new GPAccessDecision(rules, certHash, aid);
           resolve(decision.isAccessAllowed());
         });
+      })
+      .catch(e => {
+        debug('Exception at isAccessAllowed ' + e);
+        resolve(false);
       });
     });
 
@@ -197,15 +203,15 @@ ACEService.prototype = {
     return devCert;
   },
 
-  _checkSignature: function _checkSignature(devCert, aid_sig, aid) {
+  _checkSignature: function _checkSignature(devCert, guid_sig, guid) {
     let browserWindow = Services.wm.getMostRecentWindow("navigator:browser");
     let crypto = browserWindow.crypto;
     if (!crypto) {
       return Promise.reject(new Error("Browser is missing crypto support"));
     }
     if (!(devCert instanceof Uint8Array) ||
-        !(aid_sig instanceof Uint8Array) ||
-        !(aid instanceof Uint8Array)) {
+        !(guid_sig instanceof Uint8Array) ||
+        !(guid instanceof Uint8Array)) {
       return Promise.reject(new Error("Certificate, guid signature, and guid" +
                             "all must be instances of Uint8Array"));
     }
@@ -213,7 +219,8 @@ ACEService.prototype = {
     let alg = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-1" };
     return crypto.subtle.importKey("spki", devCert, alg, false, ['verify'])
       .then((cryptoKey) => {
-        return crypto.subtle.verify(alg.name, cryptoKey, aid_sig, aid);
+        debug('Got crypto key ' + cryptoKey);
+        return crypto.subtle.verify(alg.name, cryptoKey, guid_sig, guid);
       });
   },
 
