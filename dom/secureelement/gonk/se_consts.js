@@ -16,7 +16,7 @@
 /* Copyright © 2014, Deutsche Telekom, Inc. */
 
 // Set to true to debug SecureElement (SE) stack
-this.DEBUG_ALL = false;
+this.DEBUG_ALL = true;
 
 // Set individually to debug specific layers
 this.DEBUG_CONNECTOR = DEBUG_ALL || false;
@@ -62,6 +62,9 @@ this.ERROR_NOTPRESENT         = "SENotPresentError";
 
 this.TYPE_UICC = "uicc";
 this.TYPE_ESE = "eSE";
+
+this.FILE_CERT = 'dev_cert.der';
+this.FILE_PUBKEY = 'pub_key.der';
 
 // Allow this file to be imported via Components.utils.import().
 this.EXPORTED_SYMBOLS = Object.keys(this);

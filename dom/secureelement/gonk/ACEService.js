@@ -118,12 +118,13 @@ ACEService.prototype = {
     return new Promise((resolve, reject) => {
       debug("isAccessAllowed for " + manifestURL + " to " + aid);
 
-      let devCert = this._getDevCertForApp(manifestURL);
+      let pubKey = this._getFileFromApp(manifestURL, SE.FILE_PUBKEY);
+      let devCert = this._getFileFromApp(manifestURL, SE.FILE_CERT);
 
-      if (!devCert) {
-        debug("App " + manifestURL + " tried to access SE, but no developer" +
-                " certificate present");
-        return reject(new Error("No developer certificate found"));
+      if (!pubKey || !devCert) {
+        debug("App " + manifestURL + " tried to access SE, pubKey: " + !!pubKey +
+              ", devCert: " + !!devCert);
+        return reject(new Error("No developer cert or pubKey found"));
       }
 
       // TODO: Bug 973823
@@ -138,12 +139,12 @@ ACEService.prototype = {
       .then((manifest) => {
         debug('manifest: ' + JSON.stringify(manifest));
         let guid_sig = SEUtils.hexStringToUint8Array(manifest.guid_sig);
-        let guid = SEUtils.hexStringToUint8Array(manifest.guid);
-        return this._checkSignature(devCert, guid_sig, guid);
+        let guid = SEUtils.stringToUint8Array(manifest.guid);
+        return this._checkSignature(pubKey, guid_sig, guid);
       })
       .then((isSigValid) => {
          if (isSigValid) {
-           return this._getSha1(cert);
+           return this._getSha1(devCert);
          } else {
            return reject(new Error("App signature verification failed."))
          }
@@ -174,7 +175,7 @@ ACEService.prototype = {
 
   },
 
-  _getDevCertForApp: function _getDevCertForApp(manifestURL) {
+  _getFileFromApp: function _getFileFromApp(manifestURL, filepath) {
     let app = DOMApplicationRegistry.getAppByManifestURL(manifestURL);
 
     if (!app) {
@@ -195,21 +196,21 @@ ACEService.prototype = {
       .createInstance(Ci.nsIZipReader);
     zipReader.open(appPackage);
 
-    debug('has file: ' + zipReader.hasEntry("dev_cert.cer"));
-    let devCertStream = zipReader.getInputStream("dev_cert.cer");
-    let devCert = NetUtil.readInputStreamToString(devCertStream, devCertStream.available());
-    devCert = SEUtils.hexStringToUint8Array(devCert);
-    devCertStream.close();
-    return devCert;
+    debug('has file '+ filepath +':' + zipReader.hasEntry(filepath));
+    let fileStream = zipReader.getInputStream(filepath);
+    let file = NetUtil.readInputStreamToString(fileStream, fileStream.available());
+    file = SEUtils.stringToUint8Array(file);
+    fileStream.close();
+    return file;
   },
 
-  _checkSignature: function _checkSignature(devCert, guid_sig, guid) {
+  _checkSignature: function _checkSignature(pubKey, guid_sig, guid) {
     let browserWindow = Services.wm.getMostRecentWindow("navigator:browser");
     let crypto = browserWindow.crypto;
     if (!crypto) {
       return Promise.reject(new Error("Browser is missing crypto support"));
     }
-    if (!(devCert instanceof Uint8Array) ||
+    if (!(pubKey instanceof Uint8Array) ||
         !(guid_sig instanceof Uint8Array) ||
         !(guid instanceof Uint8Array)) {
       return Promise.reject(new Error("Certificate, guid signature, and guid" +
@@ -217,7 +218,7 @@ ACEService.prototype = {
     }
 
     let alg = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-1" };
-    return crypto.subtle.importKey("spki", devCert, alg, false, ['verify'])
+    return crypto.subtle.importKey("spki", pubKey, alg, false, ['verify'])
       .then((cryptoKey) => {
         debug('Got crypto key ' + cryptoKey);
         return crypto.subtle.verify(alg.name, cryptoKey, guid_sig, guid);
@@ -236,7 +237,7 @@ ACEService.prototype = {
     .then(function(arrayBuffer) {
       debug("Got Sha1: " + JSON.stringify(new Uint8Array(arrayBuffer)));
       return new Uint8Array(arrayBuffer);
-    })
+    });
   },
 
   classID: Components.ID("{882a7463-2ca7-4d61-a89a-10eb6fd70478}"),
