@@ -50,7 +50,7 @@ interface nsISEChannelCallback : nsISupports
 interface nsISecureElementStateListener : nsISupports
 {
   void handleSEStateChange(in DOMString type, in boolean isPresent);
-}
+};
 
 [scriptable, uuid(28dc0ae1-16bb-4b21-ae11-e0e5afc53421)]
 interface nsISecureElementConnector : nsISupports
