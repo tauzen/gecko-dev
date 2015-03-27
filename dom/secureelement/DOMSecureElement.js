@@ -503,13 +503,13 @@ SEManagerImpl.prototype = {
       context = promiseResolver.context;
     }
 
-    debug("receiveMessage(): " + message.name);
+    debug("receiveMessage(): " + message.name + ", data: " + JSON.stringify(message.data.result));
     switch (message.name) {
       case "SE:GetSEReadersResolved":
         let readers = new this._window.Array();
         Object.keys(result.readers).forEach(type => {
           let readerImpl = new SEReaderImpl();
-          readerImpl.initialize(this._window, type, result.readers.isPresent);
+          readerImpl.initialize(this._window, type, result.readers[type]);
           readers.push(this._window.SEReader._create(this._window, readerImpl));
         });
         resolver.resolve(readers);
