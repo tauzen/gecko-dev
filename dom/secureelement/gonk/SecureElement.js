@@ -91,7 +91,6 @@ XPCOMUtils.defineLazyGetter(this, "gMap", function() {
     // {
     //   "appId1": {
     //     target: target1,
-    //     readerType: ["uicc", "eSE"],
     //     channels: {
     //       "channelToken1": {
     //         seType: "uicc",
@@ -105,7 +104,7 @@ XPCOMUtils.defineLazyGetter(this, "gMap", function() {
     // }
     appInfoMap: {},
 
-    registerSecureElementTarget: function(appId, readerTypes, target) {
+    registerSecureElementTarget: function(appId, target) {
       if (this.isAppIdRegistered(appId)) {
         debug("AppId: " + appId + "already registered");
         return;
@@ -113,7 +112,6 @@ XPCOMUtils.defineLazyGetter(this, "gMap", function() {
 
       this.appInfoMap[appId] = {
         target: target,
-        readerTypes: readerTypes,
         channels: {}
       };
 
@@ -181,6 +179,11 @@ XPCOMUtils.defineLazyGetter(this, "gMap", function() {
       return Object.keys(this.appInfoMap[appId].channels)
                    .map(token => this.appInfoMap[appId].channels[token]);
     },
+
+    getTargets: function() {
+      return Object.keys(this.appInfoMap)
+                   .map(appId => this.appInfoMap[appId].target);
+    },
   };
 });
 
@@ -189,9 +192,13 @@ XPCOMUtils.defineLazyGetter(this, "gMap", function() {
  * child process. It interacts with other objects such as 'gMap' & 'Connector
  * instances (UiccConnector, eSEConnector)' to perform various
  * SE-related (open,close,transmit) operations.
+ * @TODO: Bug 1118096 (?)
+ * @TODO: Bug 1118097
+ * @TODO: Bug 1118101 (?)
  */
 function SecureElementManager() {
   this._registerMessageListeners();
+  this._registerConnectorStateListeners();
   Services.obs.addObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
 }
 
@@ -204,13 +211,17 @@ SecureElementManager.prototype = {
     classID:          SECUREELEMENTMANAGER_CID,
     classDescription: "SecureElementManager",
     interfaces:       [Ci.nsIMessageListener,
-                       Ci.nsIObserver]
+                       Ci.nsIObserver,
+                       Ci.nsISecureElementStateListener]
   }),
+
+  _readers: {},
 
   _shutdown: function() {
     this.secureelement = null;
     Services.obs.removeObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
     this._unregisterMessageListeners();
+    this._unregisterConnectorStateListeners();
   },
 
   _registerMessageListeners: function() {
@@ -228,19 +239,42 @@ SecureElementManager.prototype = {
     ppmm = null;
   },
 
-  _getAvailableReaderTypes: function() {
-    let readerTypes = [];
-    // TODO 1: Bug 1118096 - Add IDL so that other sub-systems such as RIL ,
-    // NFC can implement it.
-    // TODO 2: Bug 1118097 - According to OpenMobile spec, the reader names
-    // should support slot based naming convention.
-    // i;e; Instead of returning 'uicc', return 'uicc<slot#>'.
+  _registerConnectorStateListeners: function() {
+    SE.SUPPORTED_SE_TYPES.forEach((type) => {
+      let connector = getConnector(type);
+      if (connector) {
+        this._readers[type] = false;
+        connector.addSEStateListener(this);
+      }
+    });
+  },
 
-    if (UiccConnector) {
-      readerTypes.push(SE.TYPE_UICC);
-    }
+  _unregisterConnectorStateListeners: function() {
+    this._readers.forEach((type) => {
+      let connector = getConnector(type);
+      if (connector) {
+        connector.removeSEStateListener(this);
+      }
+    });
 
-    return readerTypes;
+    this._readers = {};
+  },
+
+  // nsISecureElementStateListener
+  handleSEStateChange: function(type, isPresent) {
+    this._readers[type] = isPresent;
+    this._notifySEStateChange(type, isPresent);
+  },
+
+  _notifySEStateChange: function(type, isPresent) {
+    // we need to notify all targets, even those without open channels,
+    // app could've stored the reader without actually using it
+    gMap.getTargets().forEach(target => {
+      target.sendAsyncMessage("SE:ReaderStateChange", {
+        type: type,
+        isPresent: isPresent
+      });
+    });
   },
 
   _canOpenChannel: function(appId, type) {
@@ -357,11 +391,8 @@ SecureElementManager.prototype = {
   },
 
   _handleGetSEReadersRequest: function(msg, target, callback) {
-    // TODO: Bug 1118101 Get supported readerTypes based on the permissions
-    // available for the given application.
-    let seReaderTypes = this._getAvailableReaderTypes();
-    gMap.registerSecureElementTarget(msg.appId, seReaderTypes, target);
-    callback({ readerTypes: seReaderTypes, error: SE.ERROR_NONE });
+    gMap.registerSecureElementTarget(msg.appId, target);
+    callback({ readers: this._readers, error: SE.ERROR_NONE });
   },
 
   _handleChildProcessShutdown: function(target) {

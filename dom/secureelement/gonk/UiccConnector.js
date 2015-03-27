@@ -20,7 +20,7 @@
 /* globals Components, XPCOMUtils, SE, dump, libcutils, Services,
    iccProvider, iccService, SEUtils */
 
-const { interfaces: Ci, utils: Cu } = Components;
+const { interfaces: Ci, utils: Cu, results: Cr } = Components;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
@@ -84,6 +84,7 @@ UiccConnector.prototype = {
                  Ci.nsIObserver]
   }),
 
+  _stateListeners: [],
   _isPresent: false,
 
   _init: function() {
@@ -115,6 +116,10 @@ UiccConnector.prototype = {
     let cardState = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID).cardState;
     this._isPresent = cardState !== null &&
                       uiccNotReadyStates.indexOf(cardState) == -1;
+
+    this._stateListeners.forEach((listener) => {
+      listener.handleSEStateChange(SE.TYPE_UICC, this._isPresent);
+    });
   },
 
   // See GP Spec, 11.1.4 Class Byte Coding
@@ -303,6 +308,24 @@ UiccConnector.prototype = {
         }
       }
     });
+  },
+
+  addSEStateListener: function(listener) {
+    if (this._stateListeners.indexOf(listener) !== -1) {
+      throw Cr.NS_ERROR_UNEXPECTED;
+    }
+
+    this._stateListeners.push(listener);
+    // immediately notify listener about the current state
+    listener.handleSEStateChange(SE.TYPE_UICC, this._isPresent);
+  },
+
+  removeSEStateListener: function(listener) {
+    let idx = this._listeners.indexOf(listener);
+
+    if (idx !== -1) {
+      this._listeners.splice(idx, 1);
+    }
   },
 
   /**

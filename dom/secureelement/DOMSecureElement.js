@@ -8,7 +8,7 @@
 
 /* globals dump, Components, XPCOMUtils, DOMRequestIpcHelper, cpmm, SE  */
 
-const DEBUG = false;
+const DEBUG = true;
 function debug(s) {
   if (DEBUG) {
     dump("-*- SecureElement DOM: " + s + "\n");
@@ -95,10 +95,9 @@ function SEReaderImpl() {}
 
 SEReaderImpl.prototype = {
   _window: null,
-
   _sessions: [],
-
   type: null,
+  _isSEPresent: false,
 
   classID: Components.ID("{1c7bdba3-cd35-4f8b-a546-55b3232457d5}"),
   contractID: "@mozilla.org/secureelement/reader;1",
@@ -112,9 +111,10 @@ SEReaderImpl.prototype = {
     }
   },
 
-  initialize: function initialize(win, type) {
+  initialize: function initialize(win, type, isPresent) {
     this._window = win;
     this.type = type;
+    this._isSEPresent = isPresent;
   },
 
   openSession: function openSession() {
@@ -149,9 +149,7 @@ SEReaderImpl.prototype = {
   },
 
   get isSEPresent() {
-    // TODO: Bug 1119152 - Implement new idl with interfaces to detect
-    //                     secureelement state changes.
-    return true;
+    return this._isSEPresent;
   }
 };
 
@@ -459,7 +457,8 @@ SEManagerImpl.prototype = {
                       "SE:GetSEReadersRejected",
                       "SE:OpenChannelRejected",
                       "SE:CloseChannelRejected",
-                      "SE:TransmitAPDURejected"];
+                      "SE:TransmitAPDURejected",
+                      "SE:ReaderStateChange"];
 
     this.initDOMRequestHelper(win, messages);
   },
@@ -508,12 +507,11 @@ SEManagerImpl.prototype = {
     switch (message.name) {
       case "SE:GetSEReadersResolved":
         let readers = new this._window.Array();
-        for (let i = 0; i < result.readerTypes.length; i++) {
-          chromeObj = new SEReaderImpl();
-          chromeObj.initialize(this._window, result.readerTypes[i]);
-          contentObj = this._window.SEReader._create(this._window, chromeObj);
-          readers.push(contentObj);
-        }
+        Object.keys(result.readers).forEach(type => {
+          let readerImpl = new SEReaderImpl();
+          readerImpl.initialize(this._window, type, result.readers.isPresent);
+          readers.push(this._window.SEReader._create(this._window, readerImpl));
+        });
         resolver.resolve(readers);
         break;
       case "SE:OpenChannelResolved":
@@ -552,6 +550,9 @@ SEManagerImpl.prototype = {
       case "SE:TransmitAPDURejected":
         let error = result.error || SE.ERROR_GENERIC;
         resolver.reject(error);
+        break;
+      case "SE:ReaderStateChange":
+        debug("Reader state change - " + result.type + " present: " + result.isPresent);
         break;
       default:
         debug("Could not find a handler for " + message.name);
