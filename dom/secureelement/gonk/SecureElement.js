@@ -221,7 +221,7 @@ SecureElementManager.prototype = {
     this.secureelement = null;
     Services.obs.removeObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
     this._unregisterMessageListeners();
-    this._unregisterConnectorStateListeners();
+    //this._unregisterConnectorStateListeners();
   },
 
   _registerMessageListeners: function() {
@@ -244,12 +244,18 @@ SecureElementManager.prototype = {
       let connector = getConnector(type);
       if (connector) {
         this._readers[type] = false;
-        connector.addSEStateListener(this);
+        var l = {
+          handleSEStateChange: (type, isPresent) => {
+            this._readers[type] = isPresent;
+            this._notifySEStateChange(type, isPresent);
+          }
+        };
+        connector.addSEStateListener(l);
       }
     });
   },
 
-  _unregisterConnectorStateListeners: function() {
+  /*_unregisterConnectorStateListeners: function() {
     this._readers.forEach((type) => {
       let connector = getConnector(type);
       if (connector) {
@@ -258,7 +264,7 @@ SecureElementManager.prototype = {
     });
 
     this._readers = {};
-  },
+  },*/
 
   // nsISecureElementStateListener
   handleSEStateChange: function(type, isPresent) {
@@ -269,11 +275,10 @@ SecureElementManager.prototype = {
   _notifySEStateChange: function(type, isPresent) {
     // we need to notify all targets, even those without open channels,
     // app could've stored the reader without actually using it
+    debug("notifying DOM about SE state change");
     gMap.getTargets().forEach(target => {
-      target.sendAsyncMessage("SE:ReaderStateChange", {
-        type: type,
-        isPresent: isPresent
-      });
+      var result = { type: type, isPresent: isPresent };
+      target.sendAsyncMessage("SE:ReaderStateChange", { result: result });
     });
   },
 

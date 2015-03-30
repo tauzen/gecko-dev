@@ -36,7 +36,7 @@ XPCOMUtils.defineLazyGetter(this, "SE", function() {
 let DEBUG = SE.DEBUG_CONNECTOR;
 function debug(s) {
   if (DEBUG) {
-    dump("-*- UiccConnector: " + s + "\n");
+    dump("-*- secure:UiccConnector: " + s + "\n");
   }
 }
 
@@ -89,8 +89,24 @@ UiccConnector.prototype = {
 
   _init: function() {
     Services.obs.addObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
+    var iccListener = {
+      notifyStkCommand: function() {},
+
+      notifyStkSessionEnd: function() {},
+
+      notifyIccInfoChanged: function() {
+        debug("notifyIccInfoChanged");
+        this._updatePresenceState();
+      },
+
+      notifyCardStateChanged: () => {
+        debug("notify card state");
+        this._updatePresenceState();
+      },
+    };
+
     let icc = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID);
-    icc.registerListener(this);
+    icc.registerListener(iccListener);
 
     // Update the state in order to avoid race condition.
     // By this time, 'notifyCardStateChanged (with proper card state)'
@@ -326,19 +342,6 @@ UiccConnector.prototype = {
     if (idx !== -1) {
       this._listeners.splice(idx, 1);
     }
-  },
-
-  /**
-   * nsIIccListener interface methods.
-   */
-  notifyStkCommand: function() {},
-
-  notifyStkSessionEnd: function() {},
-
-  notifyIccInfoChanged: function() {},
-
-  notifyCardStateChanged: function() {
-    this._updatePresenceState();
   },
 
   /**
