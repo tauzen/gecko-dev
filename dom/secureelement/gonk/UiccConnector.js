@@ -47,6 +47,10 @@ XPCOMUtils.defineLazyServiceGetter(this, "iccProvider",
                                    "@mozilla.org/ril/content-helper;1",
                                    "nsIIccProvider");
 
+XPCOMUtils.defineLazyServiceGetter(this, "iccService",
+                                   "@mozilla.org/icc/iccservice;1",
+                                   "nsIIccService");
+
 const UICCCONNECTOR_CONTRACTID =
   "@mozilla.org/secureelement/connector/uicc;1";
 const UICCCONNECTOR_CID =
@@ -80,11 +84,20 @@ UiccConnector.prototype = {
                  Ci.nsIObserver]
   }),
 
+  UICC_NOT_READY_STATES:[
+    Ci.nsIIcc.CARD_STATE_UNKNOWN,
+    Ci.nsIIcc.CARD_STATE_ILLEGAL,
+    Ci.nsIIcc.CARD_STATE_PERSONALIZATION_IN_PROGRESS,
+    Ci.nsIIcc.CARD_STATE_PERMANENT_BLOCKED,
+    Ci.nsIIcc.CARD_STATE_UNDETECTED
+  ],
+
   _isPresent: false,
 
   _init: function() {
     Services.obs.addObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
-    iccProvider.registerIccMsg(PREFERRED_UICC_CLIENTID, this);
+    let icc = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID);
+    icc.registerListener(this);
 
     // Update the state in order to avoid race condition.
     // By this time, 'notifyCardStateChanged (with proper card state)'
@@ -94,21 +107,14 @@ UiccConnector.prototype = {
 
   _shutdown: function() {
     Services.obs.removeObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
-    iccProvider.unregisterIccMsg(PREFERRED_UICC_CLIENTID, this);
+    let icc = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID);
+    icc.unregisterListener(this);
   },
 
   _updatePresenceState: function() {
-    // Consider following Card states as not quite ready for performing
-    // IccChannel* related commands
-    let notReadyStates = [
-      "unknown",
-      "illegal",
-      "personalizationInProgress",
-      "permanentBlocked",
-    ];
-    let cardState = iccProvider.getCardState(PREFERRED_UICC_CLIENTID);
+    let cardState = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID).cardState;
     this._isPresent = cardState !== null &&
-                      notReadyStates.indexOf(cardState) == -1;
+                      this.UICC_NOT_READY_STATES.indexOf(cardState) == -1;
   },
 
   // See GP Spec, 11.1.4 Class Byte Coding
