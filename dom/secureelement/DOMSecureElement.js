@@ -117,7 +117,15 @@ SEReaderImpl.prototype = {
     this._isSEPresent = isPresent;
   },
 
+  _checkPresence: function _checkClosed() {
+    if (!this._isSEPresent) {
+      throw new Error(SE.ERROR_NOTPRESENT);
+    }
+  },
+
   openSession: function openSession() {
+    this._checkPresence();
+
     return PromiseHelpers.createSEPromise((resolverId) => {
       let chromeObj = new SESessionImpl();
       chromeObj.initialize(this._window, this);
@@ -128,6 +136,8 @@ SEReaderImpl.prototype = {
   },
 
   closeAll: function closeAll() {
+    this._checkPresence();
+
     return PromiseHelpers.createSEPromise((resolverId) => {
       let promises = [];
       for (let session of this._sessions) {
@@ -151,9 +161,14 @@ SEReaderImpl.prototype = {
   updateSEPresence: function updateSEPresence(isSEPresent) {
     this._isSEPresent = isSEPresent;
     if (!this._isSEPresent) {
-      debug("SE type " + this._type + " removed, ivalidating sessions");
-      this._sessions.forEach(s => s.invalidate());
+      this.invalidate();
     }
+  },
+
+  invalidate: function invalidate() {
+    debug("Invalidating SE reader: " + this.type);
+    this._isSEPresent = false;
+    this._sessions.forEach(s => s.invalidate());
     this._sessions = [];
   },
 
@@ -488,6 +503,12 @@ SEManagerImpl.prototype = {
   },
 
   getSEReaders: function getSEReaders() {
+    // ivalidate previous readers on new request
+    if (this._readers.length) {
+      this._readers.forEach(r => r.invalidate());
+      this._readers = [];
+    }
+
     return PromiseHelpers.createSEPromise((resolverId) => {
       /**
        * @params for 'SE:GetSEReaders'
@@ -521,14 +542,10 @@ SEManagerImpl.prototype = {
       case "SE:GetSEReadersResolved":
         let readers = new this._window.Array();
         Object.keys(result.readers).forEach(type => {
-          let readerImpl = this._readers.find(r => r.type === type);
-          if (!readerImpl) {
-            readerImpl = new SEReaderImpl();
-            readerImpl.initialize(this._window, type, result.readers[type]);
-            this._readers.push(readerImpl);
-            this._window.SEReader._create(this._window, readerImpl);
-          }
-
+          let readerImpl = new SEReaderImpl();
+          readerImpl.initialize(this._window, type, result.readers[type]);
+          this._readers.push(readerImpl);
+          this._window.SEReader._create(this._window, readerImpl);
           readers.push(readerImpl.__DOM_IMPL__);
         });
         resolver.resolve(readers);
