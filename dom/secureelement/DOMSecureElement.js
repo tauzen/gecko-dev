@@ -130,7 +130,7 @@ SEReaderImpl.prototype = {
       let chromeObj = new SESessionImpl();
       chromeObj.initialize(this._window, this);
       let contentObj = this._window.SESession._create(this._window, chromeObj);
-      this._sessions.push(contentObj);
+      this._sessions.push(chromeObj);
       PromiseHelpers.takePromiseResolver(resolverId).resolve(contentObj);
     });
   },
@@ -526,7 +526,6 @@ SEManagerImpl.prototype = {
   receiveMessage: function receiveMessage(message) {
     let result = message.data.result;
     let chromeObj = null;
-    let contentObj = null;
     let resolver = null;
     let context = null;
 
@@ -545,8 +544,7 @@ SEManagerImpl.prototype = {
           let readerImpl = new SEReaderImpl();
           readerImpl.initialize(this._window, type, result.readers[type]);
           this._readers.push(readerImpl);
-          this._window.SEReader._create(this._window, readerImpl);
-          readers.push(readerImpl.__DOM_IMPL__);
+          readers.push(this._window.SEReader._create(this._window, readerImpl));
         });
         resolver.resolve(readers);
         break;
@@ -557,12 +555,11 @@ SEManagerImpl.prototype = {
                              result.isBasicChannel,
                              result.openResponse,
                              context);
-        contentObj = this._window.SEChannel._create(this._window, chromeObj);
         if (context) {
           // Notify context's handler with SEChannel instance
-          context.onChannelOpen(contentObj);
+          context.onChannelOpen(chromeObj);
         }
-        resolver.resolve(contentObj);
+        resolver.resolve(this._window.SEChannel._create(this._window, chromeObj));
         break;
       case "SE:TransmitAPDUResolved":
         chromeObj = new SEResponseImpl();
@@ -570,8 +567,7 @@ SEManagerImpl.prototype = {
                              result.sw2,
                              result.response,
                              context);
-        contentObj = this._window.SEResponse._create(this._window, chromeObj);
-        resolver.resolve(contentObj);
+        resolver.resolve(this._window.SEResponse._create(this._window, chromeObj));
         break;
       case "SE:CloseChannelResolved":
         if (context) {
