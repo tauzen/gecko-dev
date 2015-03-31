@@ -94,13 +94,10 @@ UiccConnector.prototype = {
 
       notifyStkSessionEnd: function() {},
 
-      notifyIccInfoChanged: function() {
-        debug("notifyIccInfoChanged");
-        this._updatePresenceState();
-      },
+      notifyIccInfoChanged: function() {},
 
       notifyCardStateChanged: () => {
-        debug("notify card state");
+        debug("Card state changed, updating UICC presence.");
         this._updatePresenceState();
       },
     };
@@ -130,12 +127,16 @@ UiccConnector.prototype = {
     ];
 
     let cardState = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID).cardState;
-    this._isPresent = cardState !== null &&
+    let uiccPresent = cardState !== null &&
                       uiccNotReadyStates.indexOf(cardState) == -1;
 
-    this._stateListeners.forEach((listener) => {
-      listener.handleSEStateChange(SE.TYPE_UICC, this._isPresent);
-    });
+    if (this._isPresent !== uiccPresent) {
+      debug("Uicc presence changed " + this._isPresent + " -> " + uiccPresent);
+      this._isPresent = uiccPresent;
+      this._stateListeners.forEach((listener) => {
+        listener.handleSEStateChange(SE.TYPE_UICC, this._isPresent);
+      });
+    }
   },
 
   // See GP Spec, 11.1.4 Class Byte Coding
