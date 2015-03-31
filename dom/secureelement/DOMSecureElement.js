@@ -148,6 +148,15 @@ SEReaderImpl.prototype = {
     });
   },
 
+  updateSEPresence: function updateSEPresence(isSEPresent) {
+    this._isSEPresent = isSEPresent;
+    if (!this._isSEPresent) {
+      debug("SE type " + this._type + " removed, ivalidating sessions");
+      this._sessions.forEach(s => s.invalidate());
+    }
+    this._sessions = [];
+  },
+
   get isSEPresent() {
     return this._isSEPresent;
   }
@@ -252,6 +261,12 @@ SESessionImpl.prototype = {
     });
   },
 
+  invalidate: function invlidate() {
+    this._isClosed = true;
+    this._channels.forEach(ch => ch.invalidate());
+    this._channels = [];
+  },
+
   get reader() {
     return this._reader.__DOM_IMPL__;
   },
@@ -259,10 +274,6 @@ SESessionImpl.prototype = {
   get isClosed() {
     return this._isClosed;
   },
-
-  set isClosed(isClosed) {
-    this._isClosed = isClosed;
-  }
 };
 
 /**
@@ -385,6 +396,10 @@ SEChannelImpl.prototype = {
     }, this);
   },
 
+  invalidate: function invalidate() {
+    this._isClosed = true;
+  },
+
   get session() {
     return this._session.__DOM_IMPL__;
   },
@@ -392,10 +407,6 @@ SEChannelImpl.prototype = {
   get isClosed() {
     return this._isClosed;
   },
-
-  set isClosed(isClosed) {
-    this._isClosed = isClosed;
-  }
 };
 
 function SEResponseImpl() {}
@@ -444,6 +455,8 @@ SEManagerImpl.prototype = {
     Ci.nsISupportsWeakReference,
     Ci.nsIObserver
   ]),
+
+  _readers: [],
 
   init: function init(win) {
     this._window = win;
@@ -508,9 +521,15 @@ SEManagerImpl.prototype = {
       case "SE:GetSEReadersResolved":
         let readers = new this._window.Array();
         Object.keys(result.readers).forEach(type => {
-          let readerImpl = new SEReaderImpl();
-          readerImpl.initialize(this._window, type, result.readers[type]);
-          readers.push(this._window.SEReader._create(this._window, readerImpl));
+          let readerImpl = this._readers.find(r => r.type === type);
+          if (!readerImpl) {
+            readerImpl = new SEReaderImpl();
+            readerImpl.initialize(this._window, type, result.readers[type]);
+            this._readers.push(readerImpl);
+            this._window.SEReader._create(this._window, readerImpl);
+          }
+
+          readers.push(readerImpl.__DOM_IMPL__);
         });
         resolver.resolve(readers);
         break;
@@ -553,6 +572,10 @@ SEManagerImpl.prototype = {
         break;
       case "SE:ReaderStateChange":
         debug("Reader state change - " + result.type + " present: " + result.isPresent);
+        let reader = this._readers.find(r => r.type === result.type);
+        if (reader) {
+          reader.updateSEPresence(result.isPresent);
+        }
         break;
       default:
         debug("Could not find a handler for " + message.name);
