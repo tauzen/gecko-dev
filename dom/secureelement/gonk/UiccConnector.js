@@ -18,7 +18,7 @@
 "use strict";
 
 /* globals Components, XPCOMUtils, SE, dump, libcutils, Services,
-   iccProvider, SEUtils */
+   iccProvider, iccService, SEUtils */
 
 const { interfaces: Ci, utils: Cu } = Components;
 
@@ -84,14 +84,6 @@ UiccConnector.prototype = {
                  Ci.nsIObserver]
   }),
 
-  UICC_NOT_READY_STATES:[
-    Ci.nsIIcc.CARD_STATE_UNKNOWN,
-    Ci.nsIIcc.CARD_STATE_ILLEGAL,
-    Ci.nsIIcc.CARD_STATE_PERSONALIZATION_IN_PROGRESS,
-    Ci.nsIIcc.CARD_STATE_PERMANENT_BLOCKED,
-    Ci.nsIIcc.CARD_STATE_UNDETECTED
-  ],
-
   _isPresent: false,
 
   _init: function() {
@@ -112,9 +104,17 @@ UiccConnector.prototype = {
   },
 
   _updatePresenceState: function() {
+    let uiccNotReadyStates = [
+      Ci.nsIIcc.CARD_STATE_UNKNOWN,
+      Ci.nsIIcc.CARD_STATE_ILLEGAL,
+      Ci.nsIIcc.CARD_STATE_PERSONALIZATION_IN_PROGRESS,
+      Ci.nsIIcc.CARD_STATE_PERMANENT_BLOCKED,
+      Ci.nsIIcc.CARD_STATE_UNDETECTED
+    ];
+
     let cardState = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID).cardState;
     this._isPresent = cardState !== null &&
-                      this.UICC_NOT_READY_STATES.indexOf(cardState) == -1;
+                      uiccNotReadyStates.indexOf(cardState) == -1;
   },
 
   // See GP Spec, 11.1.4 Class Byte Coding
