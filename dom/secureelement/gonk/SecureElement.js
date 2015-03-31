@@ -211,8 +211,7 @@ SecureElementManager.prototype = {
     classID:          SECUREELEMENTMANAGER_CID,
     classDescription: "SecureElementManager",
     interfaces:       [Ci.nsIMessageListener,
-                       Ci.nsIObserver,
-                       Ci.nsISecureElementStateListener]
+                       Ci.nsIObserver]
   }),
 
   _readers: {},
@@ -265,12 +264,6 @@ SecureElementManager.prototype = {
     });
 
     this._readers = {};
-  },
-
-  // nsISecureElementStateListener
-  handleSEStateChange: function(type, isPresent) {
-    this._readers[type] = isPresent;
-    this._notifySEStateChange(type, isPresent);
   },
 
   _notifySEStateChange: function(type, isPresent) {

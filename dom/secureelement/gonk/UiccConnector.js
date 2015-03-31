@@ -80,7 +80,6 @@ UiccConnector.prototype = {
     contractID: UICCCONNECTOR_CONTRACTID,
     classDescription: "UiccConnector",
     interfaces: [Ci.nsISecureElementConnector,
-                 Ci.nsIIccListener,
                  Ci.nsIObserver]
   }),
 
