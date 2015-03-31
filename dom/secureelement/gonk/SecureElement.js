@@ -221,7 +221,7 @@ SecureElementManager.prototype = {
     this.secureelement = null;
     Services.obs.removeObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
     this._unregisterMessageListeners();
-    //this._unregisterConnectorStateListeners();
+    this._unregisterConnectorStateListeners();
   },
 
   _registerMessageListeners: function() {
@@ -240,31 +240,32 @@ SecureElementManager.prototype = {
   },
 
   _registerConnectorStateListeners: function() {
+    this._seStateListener = {
+      handleSEStateChange: (type, isPresent) => {
+        this._readers[type] = isPresent;
+        this._notifySEStateChange(type, isPresent);
+      }
+    };
+
     SE.SUPPORTED_SE_TYPES.forEach((type) => {
       let connector = getConnector(type);
       if (connector) {
         this._readers[type] = false;
-        var l = {
-          handleSEStateChange: (type, isPresent) => {
-            this._readers[type] = isPresent;
-            this._notifySEStateChange(type, isPresent);
-          }
-        };
-        connector.addSEStateListener(l);
+        connector.addSEStateListener(this._seStateListener);
       }
     });
   },
 
-  /*_unregisterConnectorStateListeners: function() {
+  _unregisterConnectorStateListeners: function() {
     this._readers.forEach((type) => {
       let connector = getConnector(type);
       if (connector) {
-        connector.removeSEStateListener(this);
+        connector.removeSEStateListener(this._seStateListener);
       }
     });
 
     this._readers = {};
-  },*/
+  },
 
   // nsISecureElementStateListener
   handleSEStateChange: function(type, isPresent) {

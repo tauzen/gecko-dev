@@ -89,7 +89,8 @@ UiccConnector.prototype = {
 
   _init: function() {
     Services.obs.addObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
-    var iccListener = {
+
+    this._iccListener = {
       notifyStkCommand: function() {},
 
       notifyStkSessionEnd: function() {},
@@ -101,9 +102,8 @@ UiccConnector.prototype = {
         this._updatePresenceState();
       },
     };
-
     let icc = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID);
-    icc.registerListener(iccListener);
+    icc.registerListener(this._iccListener);
 
     // Update the state in order to avoid race condition.
     // By this time, 'notifyCardStateChanged (with proper card state)'
@@ -114,7 +114,7 @@ UiccConnector.prototype = {
   _shutdown: function() {
     Services.obs.removeObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
     let icc = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID);
-    icc.unregisterListener(this);
+    icc.unregisterListener(this._iccListener);
   },
 
   _updatePresenceState: function() {
