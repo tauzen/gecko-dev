@@ -83,7 +83,7 @@ UiccConnector.prototype = {
                  Ci.nsIObserver]
   }),
 
-  _stateListeners: [],
+  _presenceListeners: [],
   _isPresent: false,
 
   _init: function() {
@@ -132,8 +132,8 @@ UiccConnector.prototype = {
     if (this._isPresent !== uiccPresent) {
       debug("Uicc presence changed " + this._isPresent + " -> " + uiccPresent);
       this._isPresent = uiccPresent;
-      this._stateListeners.forEach((listener) => {
-        listener.handleSEStateChange(SE.TYPE_UICC, this._isPresent);
+      this._presenceListeners.forEach((listener) => {
+        listener.notifySEPresenceChanged(SE.TYPE_UICC, this._isPresent);
       });
     }
   },
@@ -326,18 +326,18 @@ UiccConnector.prototype = {
     });
   },
 
-  addSEStateListener: function(listener) {
-    if (this._stateListeners.indexOf(listener) !== -1) {
+  addSEPresenceListener: function(listener) {
+    if (this._presenceListeners.indexOf(listener) !== -1) {
       throw Cr.NS_ERROR_UNEXPECTED;
     }
 
-    this._stateListeners.push(listener);
+    this._presenceListeners.push(listener);
     // immediately notify listener about the current state
-    listener.handleSEStateChange(SE.TYPE_UICC, this._isPresent);
+    listener.notifySEPresenceChanged(SE.TYPE_UICC, this._isPresent);
   },
 
-  removeSEStateListener: function(listener) {
-    let idx = this._listeners.indexOf(listener);
+  removeSESPresenceListener: function(listener) {
+    let idx = this._presenceListeners.indexOf(listener);
 
     if (idx !== -1) {
       this._listeners.splice(idx, 1);

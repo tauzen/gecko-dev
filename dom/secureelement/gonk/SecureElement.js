@@ -250,7 +250,7 @@ SecureElementManager.prototype = {
       let connector = getConnector(type);
       if (connector) {
         this._readers[type] = false;
-        connector.addSEStateListener(this._sePresenceListener);
+        connector.addSEPresenceListener(this._sePresenceListener);
       }
     });
   },
@@ -259,7 +259,7 @@ SecureElementManager.prototype = {
     this._readers.forEach((type) => {
       let connector = getConnector(type);
       if (connector) {
-        connector.removeSEStateListener(this._sePresenceListener);
+        connector.removeSESPresenceListener(this._sePresenceListener);
       }
     });
 
