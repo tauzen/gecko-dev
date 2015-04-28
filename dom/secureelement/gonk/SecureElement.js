@@ -198,7 +198,7 @@ XPCOMUtils.defineLazyGetter(this, "gMap", function() {
  */
 function SecureElementManager() {
   this._registerMessageListeners();
-  this._registerConnectorStateListeners();
+  this._registerSEPresenceListeners();
   Services.obs.addObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
 }
 
@@ -220,7 +220,7 @@ SecureElementManager.prototype = {
     this.secureelement = null;
     Services.obs.removeObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
     this._unregisterMessageListeners();
-    this._unregisterConnectorStateListeners();
+    this._unregisterSEPresenceListeners();
   },
 
   _registerMessageListeners: function() {
@@ -238,11 +238,11 @@ SecureElementManager.prototype = {
     ppmm = null;
   },
 
-  _registerConnectorStateListeners: function() {
-    this._seStateListener = {
-      handleSEStateChange: (type, isPresent) => {
+  _registerSEPresenceListeners: function() {
+    this._sePresenceListener = {
+      notifySEPresenceChanged: (type, isPresent) => {
         this._readers[type] = isPresent;
-        this._notifySEStateChange(type, isPresent);
+        this._notifyReaderPresenceChanged(type, isPresent);
       }
     };
 
@@ -250,29 +250,29 @@ SecureElementManager.prototype = {
       let connector = getConnector(type);
       if (connector) {
         this._readers[type] = false;
-        connector.addSEStateListener(this._seStateListener);
+        connector.addSEStateListener(this._sePresenceListener);
       }
     });
   },
 
-  _unregisterConnectorStateListeners: function() {
+  _unregisterSEPresenceListeners: function() {
     this._readers.forEach((type) => {
       let connector = getConnector(type);
       if (connector) {
-        connector.removeSEStateListener(this._seStateListener);
+        connector.removeSEStateListener(this._sePresenceListener);
       }
     });
 
     this._readers = {};
   },
 
-  _notifySEStateChange: function(type, isPresent) {
+  _notifyReaderPresenceChanged: function(type, isPresent) {
     // we need to notify all targets, even those without open channels,
     // app could've stored the reader without actually using it
     debug("notifying DOM about SE state change");
     gMap.getTargets().forEach(target => {
       var result = { type: type, isPresent: isPresent };
-      target.sendAsyncMessage("SE:ReaderStateChange", { result: result });
+      target.sendAsyncMessage("SE:ReaderPresenceChanged", { result: result });
     });
   },
 
@@ -391,7 +391,10 @@ SecureElementManager.prototype = {
 
   _handleGetSEReadersRequest: function(msg, target, callback) {
     gMap.registerSecureElementTarget(msg.appId, target);
-    callback({ readers: this._readers, error: SE.ERROR_NONE });
+    var readers = Object.keys(this._readers).map(type => {
+     return { type: type, isPresent: this._readers[type] };
+    });
+    callback({ readers: readers, error: SE.ERROR_NONE });
   },
 
   _handleChildProcessShutdown: function(target) {

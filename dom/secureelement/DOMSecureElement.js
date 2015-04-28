@@ -506,19 +506,13 @@ SEManagerImpl.prototype = {
   },
 
   getSEReaders: function getSEReaders() {
-    // ivalidate previous readers on new request
+    // invalidate previous readers on new request
     if (this._readers.length) {
       this._readers.forEach(r => r.invalidate());
       this._readers = [];
     }
 
     return PromiseHelpers.createSEPromise((resolverId) => {
-      /**
-       * @params for 'SE:GetSEReaders'
-       *
-       * resolverId  : Id that identifies this IPC request.
-       * appId       : Current appId obtained from 'Principal' obj
-       */
       cpmm.sendAsyncMessage("SE:GetSEReaders", {
         resolverId: resolverId,
         appId: this._window.document.nodePrincipal.appId
@@ -543,10 +537,11 @@ SEManagerImpl.prototype = {
     switch (message.name) {
       case "SE:GetSEReadersResolved":
         let readers = new this._window.Array();
-        Object.keys(result.readers).forEach(type => {
+        result.readers.forEach(reader => {
           let readerImpl = new SEReaderImpl();
-          readerImpl.initialize(this._window, type, result.readers[type]);
+          readerImpl.initialize(this._window, reader.type, reader.isPresent);
           this._window.SEReader._create(this._window, readerImpl);
+
           this._readers.push(readerImpl);
           readers.push(readerImpl.__DOM_IMPL__);
         });
@@ -589,8 +584,8 @@ SEManagerImpl.prototype = {
         let error = result.error || SE.ERROR_GENERIC;
         resolver.reject(error);
         break;
-      case "SE:ReaderStateChange":
-        debug("Reader state change - " + result.type + " present: " + result.isPresent);
+      case "SE:ReaderPresenceChanged":
+        debug("Reader " + result.type + " present: " + result.isPresent);
         let reader = this._readers.find(r => r.type === result.type);
         if (reader) {
           reader.updateSEPresence(result.isPresent);
