@@ -20,7 +20,7 @@
 /* globals Components, XPCOMUtils, SE, dump, libcutils, Services,
    iccProvider, iccService, SEUtils */
 
-const { interfaces: Ci, utils: Cu } = Components;
+const { interfaces: Ci, utils: Cu, results: Cr } = Components;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
@@ -80,16 +80,29 @@ UiccConnector.prototype = {
     contractID: UICCCONNECTOR_CONTRACTID,
     classDescription: "UiccConnector",
     interfaces: [Ci.nsISecureElementConnector,
-                 Ci.nsIIccListener,
                  Ci.nsIObserver]
   }),
 
+  _presenceListeners: [],
   _isPresent: false,
 
   _init: function() {
     Services.obs.addObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
+
+    this._iccListener = {
+      notifyStkCommand: function() {},
+
+      notifyStkSessionEnd: function() {},
+
+      notifyIccInfoChanged: function() {},
+
+      notifyCardStateChanged: () => {
+        debug("Card state changed, updating UICC presence.");
+        this._updatePresenceState();
+      },
+    };
     let icc = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID);
-    icc.registerListener(this);
+    icc.registerListener(this._iccListener);
 
     // Update the state in order to avoid race condition.
     // By this time, 'notifyCardStateChanged (with proper card state)'
@@ -100,7 +113,7 @@ UiccConnector.prototype = {
   _shutdown: function() {
     Services.obs.removeObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
     let icc = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID);
-    icc.unregisterListener(this);
+    icc.unregisterListener(this._iccListener);
   },
 
   _updatePresenceState: function() {
@@ -113,8 +126,16 @@ UiccConnector.prototype = {
     ];
 
     let cardState = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID).cardState;
-    this._isPresent = cardState !== null &&
+    let uiccPresent = cardState !== null &&
                       uiccNotReadyStates.indexOf(cardState) == -1;
+
+    if (this._isPresent !== uiccPresent) {
+      debug("Uicc presence changed " + this._isPresent + " -> " + uiccPresent);
+      this._isPresent = uiccPresent;
+      this._presenceListeners.forEach((listener) => {
+        listener.notifySEPresenceChanged(SE.TYPE_UICC, this._isPresent);
+      });
+    }
   },
 
   // See GP Spec, 11.1.4 Class Byte Coding
@@ -305,17 +326,22 @@ UiccConnector.prototype = {
     });
   },
 
-  /**
-   * nsIIccListener interface methods.
-   */
-  notifyStkCommand: function() {},
+  addSEPresenceListener: function(listener) {
+    if (this._presenceListeners.indexOf(listener) !== -1) {
+      throw Cr.NS_ERROR_UNEXPECTED;
+    }
 
-  notifyStkSessionEnd: function() {},
+    this._presenceListeners.push(listener);
+    // immediately notify listener about the current state
+    listener.notifySEPresenceChanged(SE.TYPE_UICC, this._isPresent);
+  },
 
-  notifyIccInfoChanged: function() {},
+  removeSESPresenceListener: function(listener) {
+    let idx = this._presenceListeners.indexOf(listener);
 
-  notifyCardStateChanged: function() {
-    this._updatePresenceState();
+    if (idx !== -1) {
+      this._listeners.splice(idx, 1);
+    }
   },
 
   /**

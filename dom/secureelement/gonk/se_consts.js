@@ -62,5 +62,7 @@ this.ERROR_NOTPRESENT         = "SENotPresentError";
 this.TYPE_UICC = "uicc";
 this.TYPE_ESE = "eSE";
 
+this.SUPPORTED_SE_TYPES = [this.TYPE_UICC];
+
 // Allow this file to be imported via Components.utils.import().
 this.EXPORTED_SYMBOLS = Object.keys(this);
