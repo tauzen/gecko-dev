@@ -216,7 +216,7 @@ SecureElementManager.prototype = {
                        Ci.nsIObserver]
   }),
 
-  _readers: {},
+  _readerPresence: {},
 
   _shutdown: function() {
     this.secureelement = null;
@@ -242,28 +242,30 @@ SecureElementManager.prototype = {
 
   _registerSEPresenceListeners: function() {
     let connector = getConnector(SE.TYPE_UICC);
-    if (connector) {
-      this._readers[SE.TYPE_UICC] = false;
-      connector.addSEPresenceListener(this);
+    if (!connector) {
+      return;
     }
+
+    this._readerPresence[SE.TYPE_UICC] = false;
+    connector.addSEPresenceListener(this);
   },
 
   _unregisterSEPresenceListeners: function() {
-    Object.keys(this._readers).forEach((type) => {
+    Object.keys(this._readerPresence).forEach((type) => {
       let connector = getConnector(type);
       if (connector) {
         connector.removeSESPresenceListener(this);
       }
     });
 
-    this._readers = {};
+    this._readerPresence = {};
   },
 
   notifySEPresenceChanged: function(type, isPresent) {
     // we need to notify all targets, even those without open channels,
     // app could've stored the reader without actually using it
     debug("notifying DOM about SE state change");
-    this._readers[type] = isPresent;
+    this._readerPresence[type] = isPresent;
     gMap.getTargets().forEach(target => {
       let result = { type: type, isPresent: isPresent };
       target.sendAsyncMessage("SE:ReaderPresenceChanged", { result: result });
@@ -385,8 +387,8 @@ SecureElementManager.prototype = {
 
   _handleGetSEReadersRequest: function(msg, target, callback) {
     gMap.registerSecureElementTarget(msg.appId, target);
-    let readers = Object.keys(this._readers).map(type => {
-     return { type: type, isPresent: this._readers[type] };
+    let readers = Object.keys(this._readerPresence).map(type => {
+     return { type: type, isPresent: this._readerPresence[type] };
     });
     callback({ readers: readers, error: SE.ERROR_NONE });
   },

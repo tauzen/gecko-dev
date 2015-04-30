@@ -162,10 +162,12 @@ SEReaderImpl.prototype = {
   },
 
   updateSEPresence: function updateSEPresence(isSEPresent) {
-    this._isSEPresent = isSEPresent;
-    if (!this._isSEPresent) {
+    if (!isSEPresent) {
       this.invalidate();
+      return;
     }
+
+    this._isSEPresent = isSEPresent;
   },
 
   invalidate: function invalidate() {
@@ -521,7 +523,7 @@ SEManagerImpl.prototype = {
   },
 
   receiveMessage: function receiveMessage(message) {
-    debug("receiveMessage(): " + message.name);
+    DEBUG && debug("Message received: " + JSON.stringify(message));
 
     let result = message.data.result;
     let resolver = null;
