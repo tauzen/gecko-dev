@@ -388,7 +388,7 @@ SecureElementManager.prototype = {
   _handleGetSEReadersRequest: function(msg, target, callback) {
     gMap.registerSecureElementTarget(msg.appId, target);
     let readers = Object.keys(this._readerPresence).map(type => {
-     return { type: type, isPresent: this._readerPresence[type] };
+      return { type: type, isPresent: this._readerPresence[type] };
     });
     callback({ readers: readers, error: SE.ERROR_NONE });
   },

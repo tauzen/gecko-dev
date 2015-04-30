@@ -119,7 +119,7 @@ SEReaderImpl.prototype = {
     this._isSEPresent = isPresent;
   },
 
-  _checkPresence: function _checkClosed() {
+  _checkPresence: function _checkPresence() {
     if (!this._isSEPresent) {
       throw new Error(SE.ERROR_NOTPRESENT);
     }
