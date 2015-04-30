@@ -204,13 +204,15 @@ function SecureElementManager() {
 
 SecureElementManager.prototype = {
   QueryInterface: XPCOMUtils.generateQI([
+    Ci.nsISecureElementPresenceListener,
     Ci.nsIMessageListener,
     Ci.nsIObserver]),
   classID: SECUREELEMENTMANAGER_CID,
   classInfo: XPCOMUtils.generateCI({
     classID:          SECUREELEMENTMANAGER_CID,
     classDescription: "SecureElementManager",
-    interfaces:       [Ci.nsIMessageListener,
+    interfaces:       [Ci.nsISecureElementPresenceListener,
+                       Ci.nsIMessageListener,
                        Ci.nsIObserver]
   }),
 
@@ -239,39 +241,31 @@ SecureElementManager.prototype = {
   },
 
   _registerSEPresenceListeners: function() {
-    this._sePresenceListener = {
-      notifySEPresenceChanged: (type, isPresent) => {
-        this._readers[type] = isPresent;
-        this._notifyReaderPresenceChanged(type, isPresent);
-      }
-    };
-
-    SE.SUPPORTED_SE_TYPES.forEach((type) => {
-      let connector = getConnector(type);
-      if (connector) {
-        this._readers[type] = false;
-        connector.addSEPresenceListener(this._sePresenceListener);
-      }
-    });
+    let connector = getConnector(SE.TYPE_UICC);
+    if (connector) {
+      this._readers[SE.TYPE_UICC] = false;
+      connector.addSEPresenceListener(this);
+    }
   },
 
   _unregisterSEPresenceListeners: function() {
-    this._readers.forEach((type) => {
+    Object.keys(this._readers).forEach((type) => {
       let connector = getConnector(type);
       if (connector) {
-        connector.removeSESPresenceListener(this._sePresenceListener);
+        connector.removeSESPresenceListener(this);
       }
     });
 
     this._readers = {};
   },
 
-  _notifyReaderPresenceChanged: function(type, isPresent) {
+  notifySEPresenceChanged: function(type, isPresent) {
     // we need to notify all targets, even those without open channels,
     // app could've stored the reader without actually using it
     debug("notifying DOM about SE state change");
+    this._readers[type] = isPresent;
     gMap.getTargets().forEach(target => {
-      var result = { type: type, isPresent: isPresent };
+      let result = { type: type, isPresent: isPresent };
       target.sendAsyncMessage("SE:ReaderPresenceChanged", { result: result });
     });
   },
@@ -391,7 +385,7 @@ SecureElementManager.prototype = {
 
   _handleGetSEReadersRequest: function(msg, target, callback) {
     gMap.registerSecureElementTarget(msg.appId, target);
-    var readers = Object.keys(this._readers).map(type => {
+    let readers = Object.keys(this._readers).map(type => {
      return { type: type, isPresent: this._readers[type] };
     });
     callback({ readers: readers, error: SE.ERROR_NONE });

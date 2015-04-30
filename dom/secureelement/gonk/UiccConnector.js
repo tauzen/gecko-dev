@@ -73,13 +73,15 @@ function UiccConnector() {
 }
 
 UiccConnector.prototype = {
-  QueryInterface: XPCOMUtils.generateQI([Ci.nsISecureElementConnector]),
+  QueryInterface: XPCOMUtils.generateQI([Ci.nsISecureElementConnector,
+                                         Ci.nsIIccListener]),
   classID: UICCCONNECTOR_CID,
   classInfo: XPCOMUtils.generateCI({
     classID: UICCCONNECTOR_CID,
     contractID: UICCCONNECTOR_CONTRACTID,
     classDescription: "UiccConnector",
     interfaces: [Ci.nsISecureElementConnector,
+                 Ci.nsIIccListener,
                  Ci.nsIObserver]
   }),
 
@@ -90,19 +92,10 @@ UiccConnector.prototype = {
     Services.obs.addObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
 
     this._iccListener = {
-      notifyStkCommand: function() {},
 
-      notifyStkSessionEnd: function() {},
-
-      notifyIccInfoChanged: function() {},
-
-      notifyCardStateChanged: () => {
-        debug("Card state changed, updating UICC presence.");
-        this._updatePresenceState();
-      },
     };
     let icc = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID);
-    icc.registerListener(this._iccListener);
+    icc.registerListener(this);
 
     // Update the state in order to avoid race condition.
     // By this time, 'notifyCardStateChanged (with proper card state)'
@@ -113,7 +106,7 @@ UiccConnector.prototype = {
   _shutdown: function() {
     Services.obs.removeObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
     let icc = iccService.getIccByServiceId(PREFERRED_UICC_CLIENTID);
-    icc.unregisterListener(this._iccListener);
+    icc.unregisterListener(this);
   },
 
   _updatePresenceState: function() {
@@ -342,6 +335,21 @@ UiccConnector.prototype = {
     if (idx !== -1) {
       this._listeners.splice(idx, 1);
     }
+  },
+
+  /**
+   * nsIIccListener interface methods
+   */
+
+  notifyStkCommand: function() {},
+
+  notifyStkSessionEnd: function() {},
+
+  notifyIccInfoChanged: function() {},
+
+  notifyCardStateChanged: function() {
+    debug("Card state changed, updating UICC presence.");
+    this._updatePresenceState();
   },
 
   /**
