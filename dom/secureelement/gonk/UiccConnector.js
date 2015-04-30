@@ -122,13 +122,15 @@ UiccConnector.prototype = {
     let uiccPresent = cardState !== null &&
                       uiccNotReadyStates.indexOf(cardState) == -1;
 
-    if (this._isPresent !== uiccPresent) {
-      debug("Uicc presence changed " + this._isPresent + " -> " + uiccPresent);
-      this._isPresent = uiccPresent;
-      this._presenceListeners.forEach((listener) => {
-        listener.notifySEPresenceChanged(SE.TYPE_UICC, this._isPresent);
-      });
+    if (this._isPresent === uiccPresent) {
+      return;
     }
+
+    debug("Uicc presence changed " + this._isPresent + " -> " + uiccPresent);
+    this._isPresent = uiccPresent;
+    this._presenceListeners.forEach((listener) => {
+      listener.notifySEPresenceChanged(SE.TYPE_UICC, this._isPresent);
+    });
   },
 
   // See GP Spec, 11.1.4 Class Byte Coding
@@ -331,7 +333,6 @@ UiccConnector.prototype = {
 
   removeSESPresenceListener: function(listener) {
     let idx = this._presenceListeners.indexOf(listener);
-
     if (idx !== -1) {
       this._listeners.splice(idx, 1);
     }
