@@ -198,21 +198,21 @@ XPCOMUtils.defineLazyGetter(this, "gMap", function() {
  */
 function SecureElementManager() {
   this._registerMessageListeners();
-  this._registerSEPresenceListeners();
+  this._registerSEListeners();
   Services.obs.addObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
 }
 
 SecureElementManager.prototype = {
   QueryInterface: XPCOMUtils.generateQI([
-    Ci.nsISecureElementPresenceListener,
     Ci.nsIMessageListener,
+    Ci.nsISEListener,
     Ci.nsIObserver]),
   classID: SECUREELEMENTMANAGER_CID,
   classInfo: XPCOMUtils.generateCI({
     classID:          SECUREELEMENTMANAGER_CID,
     classDescription: "SecureElementManager",
-    interfaces:       [Ci.nsISecureElementPresenceListener,
-                       Ci.nsIMessageListener,
+    interfaces:       [Ci.nsIMessageListener,
+                       Ci.nsISEListener,
                        Ci.nsIObserver]
   }),
 
@@ -222,7 +222,7 @@ SecureElementManager.prototype = {
     this.secureelement = null;
     Services.obs.removeObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
     this._unregisterMessageListeners();
-    this._unregisterSEPresenceListeners();
+    this._unregisterSEListeners();
   },
 
   _registerMessageListeners: function() {
@@ -240,21 +240,21 @@ SecureElementManager.prototype = {
     ppmm = null;
   },
 
-  _registerSEPresenceListeners: function() {
+  _registerSEListeners: function() {
     let connector = getConnector(SE.TYPE_UICC);
     if (!connector) {
       return;
     }
 
     this._readerPresence[SE.TYPE_UICC] = false;
-    connector.addSEPresenceListener(this);
+    connector.registerListener(this);
   },
 
-  _unregisterSEPresenceListeners: function() {
+  _unregisterSEListeners: function() {
     Object.keys(this._readerPresence).forEach((type) => {
       let connector = getConnector(type);
       if (connector) {
-        connector.removeSESPresenceListener(this);
+        connector.unregisterListener(this);
       }
     });
 

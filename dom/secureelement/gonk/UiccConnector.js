@@ -85,7 +85,7 @@ UiccConnector.prototype = {
                  Ci.nsIObserver]
   }),
 
-  _presenceListeners: [],
+  _SEListeners: [],
   _isPresent: false,
 
   _init: function() {
@@ -128,7 +128,7 @@ UiccConnector.prototype = {
 
     debug("Uicc presence changed " + this._isPresent + " -> " + uiccPresent);
     this._isPresent = uiccPresent;
-    this._presenceListeners.forEach((listener) => {
+    this._SEListeners.forEach((listener) => {
       listener.notifySEPresenceChanged(SE.TYPE_UICC, this._isPresent);
     });
   },
@@ -321,27 +321,26 @@ UiccConnector.prototype = {
     });
   },
 
-  addSEPresenceListener: function(listener) {
-    if (this._presenceListeners.indexOf(listener) !== -1) {
+  registerListener: function(listener) {
+    if (this._SEListeners.indexOf(listener) !== -1) {
       throw Cr.NS_ERROR_UNEXPECTED;
     }
 
-    this._presenceListeners.push(listener);
+    this._SEListeners.push(listener);
     // immediately notify listener about the current state
     listener.notifySEPresenceChanged(SE.TYPE_UICC, this._isPresent);
   },
 
-  removeSESPresenceListener: function(listener) {
-    let idx = this._presenceListeners.indexOf(listener);
+  unregisterListener: function(listener) {
+    let idx = this._SEListeners.indexOf(listener);
     if (idx !== -1) {
       this._listeners.splice(idx, 1);
     }
   },
 
   /**
-   * nsIIccListener interface methods
+   * nsIIccListener interface methods.
    */
-
   notifyStkCommand: function() {},
 
   notifyStkSessionEnd: function() {},
