@@ -16,6 +16,10 @@ XPCOMUtils.defineLazyServiceGetter(this, "AppsService",
 XPCOMUtils.defineLazyModuleGetter(this, "SEUtils",
                                   "resource://gre/modules/SEUtils.jsm");
 
+XPCOMUtils.defineLazyServiceGetter(this, "ACEService",
+                                   "@mozilla.org/secureelement/access-control/ace;1",
+                                   "nsIAccessControlEnforcer");
+
 XPCOMUtils.defineLazyGetter(this, "SE", () => {
   let obj = {};
   Cu.import("resource://gre/modules/se_consts.js", obj);
@@ -50,27 +54,26 @@ HCIEventTransactionSystemMessageConfigurator.prototype = {
       return Promise.resolve(false);
     }
 
+    let appId = AppsService.getAppLocalIdByManifestURL(aManifestURL);
+    if (appId == Ci.nsIScriptSecurityManager.NO_APP_ID) {
+      return Promise.resolve(false);
+    }
+
     return new Promise((resolve, reject) => {
       AppsService.getManifestFor(aManifestURL)
       .then((aManifest) => this._checkAppManifest(aMessage.origin, aMessage.aid, aManifest))
-      .then(() => {
-        // FIXME: Bug 884594: Access Control Enforcer
-        // Here we will call ace.isAllowed function which will also return
-        // a Promise, for now we're just resolving shouldDispatch promise
-        debug("dispatching message");
-        resolve(true);
+      .then(() => ACEService.isAccessAllowed(appId, aMessage.origin, aMessage.aid))
+      .then((allowed) => {
+        debug("dispatching message: " + allowed);
+        resolve(allowed);
       })
       .catch(() => {
-        // if the Promise chain was broken we don't dispatch the message
         debug("not dispatching");
         resolve(false);
       });
     });
   },
 
-  // we might be doing some async hash computations here, returning
-  // a resolved/rejected promise for now so we can easily fit the method
-  // into a Promise chain
   _checkAppManifest: function _checkAppManifest(aOrigin, aAid, aManifest) {
     DEBUG && debug("aManifest " + JSON.stringify(aManifest));
 
