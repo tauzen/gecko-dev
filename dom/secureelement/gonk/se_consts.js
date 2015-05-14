@@ -16,7 +16,7 @@
 /* Copyright © 2014, Deutsche Telekom, Inc. */
 
 // Set to true to debug SecureElement (SE) stack
-this.DEBUG_ALL = false;
+this.DEBUG_ALL = true;
 
 // Set individually to debug specific layers
 this.DEBUG_CONNECTOR = DEBUG_ALL || false;
@@ -60,7 +60,7 @@ this.ERROR_INVALIDAPPLICATION = "SEInvalidApplicationError";
 this.ERROR_GENERIC            = "SEGenericError";
 this.ERROR_NOTPRESENT         = "SENotPresentError";
 
-this.TYPE_UICC = "uicc";
+this.TYPE_UICC = "UICC";
 this.TYPE_ESE = "eSE";
 
 // Allow this file to be imported via Components.utils.import().

@@ -190,7 +190,10 @@ public:
 
       event.mOrigin.Construct();
       event.mOrigin.Value().AssignASCII(HCIEventOriginValues::strings[mEvent.mOriginType].value);
-      event.mOrigin.Value().AppendInt(mEvent.mOriginIndex, 16 /* radix */);
+      // Open Mobile API specification V2.05, section 6.6.1, index 1 is optional
+      if(mEvent.mOriginIndex > 1) {
+        event.mOrigin.Value().AppendInt(mEvent.mOriginIndex, 16 /* radix */);
+      }
     }
 
     if (mEvent.mAid.Length() > 0) {
