@@ -60,7 +60,7 @@ this.ERROR_INVALIDAPPLICATION = "SEInvalidApplicationError";
 this.ERROR_GENERIC            = "SEGenericError";
 this.ERROR_NOTPRESENT         = "SENotPresentError";
 
-this.TYPE_UICC = "uicc";
+this.TYPE_UICC = "UICC";
 this.TYPE_ESE = "eSE";
 
 // Allow this file to be imported via Components.utils.import().

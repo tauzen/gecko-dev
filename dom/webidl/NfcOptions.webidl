@@ -47,7 +47,7 @@ enum NfcNotificationType {
  * The source of HCI Transaction Event.
  */
 enum HCIEventOrigin {
-  "SIM",
+  "UICC",
   "eSE",
   "ASSD"
 };

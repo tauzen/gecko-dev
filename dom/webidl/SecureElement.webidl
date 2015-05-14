@@ -5,7 +5,7 @@
  /* Copyright © 2014 Deutsche Telekom, Inc. */
 
 enum SEType {
-  "uicc",
+  "UICC",
   "eSE"
 };
 
