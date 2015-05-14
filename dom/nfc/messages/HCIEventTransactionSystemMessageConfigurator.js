@@ -9,12 +9,16 @@ const { interfaces: Ci, utils: Cu } = Components;
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Promise.jsm");
 
-XPCOMUtils.defineLazyServiceGetter(this, "appsService",
+XPCOMUtils.defineLazyServiceGetter(this, "AppsService",
                                    "@mozilla.org/AppsService;1",
                                    "nsIAppsService");
 
 XPCOMUtils.defineLazyModuleGetter(this, "SEUtils",
                                   "resource://gre/modules/SEUtils.jsm");
+
+XPCOMUtils.defineLazyServiceGetter(this, "ACEService",
+                                   "@mozilla.org/secureelement/access-control/ace;1",
+                                   "nsIAccessControlEnforcer");
 
 XPCOMUtils.defineLazyGetter(this, "SE", () => {
   let obj = {};
@@ -50,15 +54,18 @@ HCIEventTransactionSystemMessageConfigurator.prototype = {
       return Promise.resolve(false);
     }
 
+    let appId = AppsService.getAppLocalIdByManifestURL(aManifestURL);
+    if (appId == Ci.nsIScriptSecurityManager.NO_APP_ID) {
+      return Promise.resolve(false);
+    }
+
     return new Promise((resolve, reject) => {
-      appsService.getManifestFor(aManifestURL)
+      AppsService.getManifestFor(aManifestURL)
       .then((aManifest) => this._checkAppManifest(aMessage.origin, aMessage.aid, aManifest))
-      .then(() => {
-        // FIXME: Bug 884594: Access Control Enforcer
-        // Here we will call ace.isAllowed function which will also return
-        // a Promise, for now we're just resolving shouldDispatch promise
-        debug("dispatching message");
-        resolve(true);
+      .then(() => ACEService.isAccessAllowed(appId, aMessage.origin, aMessage.aid))
+      .then((allowed) => {
+        debug("dispatching message: " + allowed);
+        resolve(allowed);
       })
       .catch(() => {
         // if the Promise chain was broken we don't dispatch the message
