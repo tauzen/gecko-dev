@@ -301,7 +301,9 @@ XPCOMUtils.defineLazyGetter(this, "gMessageManager", function () {
         return;
       }
 
-      this.notifyDOMEvent(target, {tabId: this.focusApp,
+      let tabId = this.eventListeners[this.focusApp] ? this.focusApp
+                                                     : NFC.SYSTEM_APP_ID;
+      this.notifyDOMEvent(target, {tabId: tabId,
                                    event: NFC.PEER_EVENT_READY,
                                    sessionToken: sessionToken});
     },
