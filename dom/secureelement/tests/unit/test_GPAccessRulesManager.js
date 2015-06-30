@@ -6,8 +6,10 @@
 /* globals run_next_test, add_test, ok, Components, SEUtils */
 /* exported run_test */
 
-const Ci = Components.interfaces;
+const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
+Cu.import("resource://gre/modules/Promise.jsm");
+Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
 const HASH_APP1 = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
                    0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11];
@@ -247,7 +249,13 @@ const GPD_SCENARIO1 = {
   ]
 };
 
+let GPAccessRulesManager = null;
+
 function run_test() {
-  ok(true, "GP test");
+  GPAccessRulesManager =
+    Cc["@mozilla.org/secureelement/access-control/rules-manager;1"]
+    .createInstance(Ci.nsIAccessRulesManager);
+
+  ok(!!GPAccessRulesManager, "RulesManager should be instantiated");
   run_next_test();
 }

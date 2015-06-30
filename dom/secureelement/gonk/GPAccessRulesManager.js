@@ -85,10 +85,9 @@ GPAccessRulesManager.prototype = {
   _readAccessRules: Task.async(function*(done) {
     try {
       yield this._openChannel(this.PKCS_AID);
-
       let odf = yield this._readODF();
+      console.log('readDodf');
       let dodf = yield this._readDODF(odf);
-
       let acmf = yield this._readACMF(dodf);
       let refreshTag = acmf[this.REFRESH_TAG_PATH[0]]
                            [this.REFRESH_TAG_PATH[1]];
@@ -223,7 +222,7 @@ GPAccessRulesManager.prototype = {
   },
 
   _readDODF: function _readDODF(odfFile) {
-    debug("_readDODF, ODF file: " + odfFile);
+    DEBUG && debug("_readDODF, ODF file: " + JSON.stringify(odfFile));
 
     // Data Object Directory File (DODF) is used as an entry point to the
     // Access Control data. It is specified in PKCS#15 section 6.7.6.
@@ -364,11 +363,14 @@ GPAccessRulesManager.prototype = {
       // given). 0x82 means that rule describes acccess to all SE applets.
       let oneApplet = ruleEntry[GP.TAG_GPD_AID];
       let allApplets = ruleEntry[GP.TAG_GPD_ALL];
+      //let defaultAID = ruleEntry[0x81];
 
       if (oneApplet) {
         rule.applet = oneApplet[GP.TAG_OCTETSTRING];
       } else if (allApplets) {
         rule.applet = Ci.nsIAccessRulesManager.ALL_APPLET;
+      //} else if (defaultAID) {
+      //  rule.applet = 'default';
       } else {
         throw Error("Unknown applet definition");
       }
