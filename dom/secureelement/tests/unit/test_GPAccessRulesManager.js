@@ -3,13 +3,14 @@
 
 "use strict";
 
-/* globals run_next_test, add_test, ok, Components, SEUtils */
+/* globals run_next_test, add_test, ok, Components, SEUtils, XPCOMUtils */
 /* exported run_test */
 
 const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Promise.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
+Cu.import("resource://gre/modules/SEUtils.jsm");
 
 const HASH_APP1 = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
                    0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11];
@@ -249,9 +250,64 @@ const GPD_SCENARIO1 = {
   ]
 };
 
+let MockUiccConnector = {
+  set scenario(value) {
+    this._scenario(value);
+    this._step = 0;
+  },
+  _step: 0,
+
+  _channelId: 1,
+
+  openChannel: function(aid, cb) {
+    ok(this._step === 0, "Channel should be opend before first step");
+    ok(!!cb, "Callback object needs to be specified");
+    ok((typeof cb.notifyOpenChannelSuccess) === "function",
+        "callback.notifyOpenChannelSuccess should be a funciton");
+    cb.notifyOpenChannelSuccess(this._channelId);
+  },
+
+  exchangeAPDU: function(channel, cla, ins, p1, p2, data, le, cb) {
+    ok(channel === this._channelId, "Exchange should happen on proper channel");
+    ok(!!cb, "Callback object needs to be specified");
+    ok((typeof cb.notifyExchangeAPDUResponse) === "function",
+       "callback.notifyExchangeAPDUResponse should be a function");
+
+    let step = this._scenario.steps[this._step];
+    ok(!!step, "Scenario steps already finished, invalid request");
+
+    let request = this._convertAPDUToHexStr(cla, ins, p1, p2, data, le);
+    let expectedRequest = step.request.replace(/\s+/g,"");
+    ok(request === expectedRequest,
+       "Request should match scenario step request");
+
+    this._step += 1;
+    cb.notifyExchangeAPDUResponse(0x90, 0x00, step.response.replace(/\s+/g,""));
+  },
+
+  closeChannel: function(channel, callback) {
+    ok(this._step === this._scenario.steps.length,
+       "Channel should be closed after last step");
+    ok(channel, this._channelId, "Proper channel should be closed");
+    if(callback) {
+      callback.notifyCloseChannelSuccess();
+    }
+  },
+
+  _convertAPDUToHexStr: function(cla, ins, p1, p2, data, le) {
+    var dataLen  = (data) ? data.length/2 : 0;
+    var bytes = [cla, ins, p1, p2, dataLen];
+    return SEUtils.byteArrayToHexString(bytes) + ((dataLen) ? data : "");
+  }
+};
+
 let GPAccessRulesManager = null;
 
 function run_test() {
+  XPCOMUtils.defineLazyServiceGetter = (obj) => {
+    obj.UiccConnector = MockUiccConnector;
+  };
+
   GPAccessRulesManager =
     Cc["@mozilla.org/secureelement/access-control/rules-manager;1"]
     .createInstance(Ci.nsIAccessRulesManager);
@@ -259,3 +315,7 @@ function run_test() {
   ok(!!GPAccessRulesManager, "RulesManager should be instantiated");
   run_next_test();
 }
+
+add_test(function test_GPDScenario1_rule_parsing() {
+  MockUiccConnector.scenario = GPD_SCENARIO1;
+});
