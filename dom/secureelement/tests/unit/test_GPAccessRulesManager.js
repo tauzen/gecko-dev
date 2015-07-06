@@ -3,7 +3,8 @@
 
 "use strict";
 
-/* globals run_next_test, add_test, ok, Components, SEUtils, XPCOMUtils */
+/* globals run_next_test, add_test, ok, equal, deepEqual,
+   Components, SEUtils, XPCOMUtils */
 /* exported run_test */
 
 const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
@@ -252,25 +253,30 @@ const GPD_SCENARIO1 = {
 
 let MockUiccConnector = {
   set scenario(value) {
-    this._scenario(value);
+    this._scenario = value;
     this._step = 0;
   },
+
+  get scenario() {
+    return this._scenario;
+  },
+
   _step: 0,
 
   _channelId: 1,
 
   openChannel: function(aid, cb) {
-    ok(this._step === 0, "Channel should be opend before first step");
+    equal(this._step, 0, "Channel should be opend before first step");
     ok(!!cb, "Callback object needs to be specified");
-    ok((typeof cb.notifyOpenChannelSuccess) === "function",
+    equal(typeof cb.notifyOpenChannelSuccess, "function",
         "callback.notifyOpenChannelSuccess should be a funciton");
     cb.notifyOpenChannelSuccess(this._channelId);
   },
 
   exchangeAPDU: function(channel, cla, ins, p1, p2, data, le, cb) {
-    ok(channel === this._channelId, "Exchange should happen on proper channel");
+    equal(channel, this._channelId, "Exchange should happen on proper channel");
     ok(!!cb, "Callback object needs to be specified");
-    ok((typeof cb.notifyExchangeAPDUResponse) === "function",
+    equal(typeof cb.notifyExchangeAPDUResponse, "function",
        "callback.notifyExchangeAPDUResponse should be a function");
 
     let step = this._scenario.steps[this._step];
@@ -278,17 +284,17 @@ let MockUiccConnector = {
 
     let request = this._convertAPDUToHexStr(cla, ins, p1, p2, data, le);
     let expectedRequest = step.request.replace(/\s+/g,"");
-    ok(request === expectedRequest,
-       "Request should match scenario step request");
+    equal(request, expectedRequest,
+          "Request should match scenario step request");
 
     this._step += 1;
     cb.notifyExchangeAPDUResponse(0x90, 0x00, step.response.replace(/\s+/g,""));
   },
 
   closeChannel: function(channel, callback) {
-    ok(this._step === this._scenario.steps.length,
-       "Channel should be closed after last step");
-    ok(channel, this._channelId, "Proper channel should be closed");
+    equal(this._step, this._scenario.steps.length,
+          "Channel should be closed after last step");
+    equal(channel, this._channelId, "Proper channel should be closed");
     if(callback) {
       callback.notifyCloseChannelSuccess();
     }
@@ -300,6 +306,10 @@ let MockUiccConnector = {
     return SEUtils.byteArrayToHexString(bytes) + ((dataLen) ? data : "");
   }
 };
+
+function handleRejectedPromise() {
+  ok(false, "Promise should not be rejected");
+}
 
 let GPAccessRulesManager = null;
 
@@ -318,4 +328,20 @@ function run_test() {
 
 add_test(function test_GPDScenario1_rule_parsing() {
   MockUiccConnector.scenario = GPD_SCENARIO1;
+  GPAccessRulesManager.getAccessRules().then((rules) => {
+    ok(true, JSON.stringify(rules));
+    rules.forEach((rule, idx) => {
+      let expectedRule = MockUiccConnector.scenario.expectedRules[idx];
+
+      ok(true, "Actuall " + JSON.stringify(rule));
+      ok(true, "Expected " + JSON.stringify(expectedRule));
+
+      deepEqual(rule.applet, expectedRule.applet,
+         "Rule " + idx + " applet property should match, ");
+      deepEqual(rule.application, expectedRule.application,
+         "Rule " + idx + " application property should match");
+    });
+  })
+  .catch(handleRejectedPromise)
+  .then(run_next_test);
 });
