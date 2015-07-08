@@ -3,40 +3,19 @@
 
 "use strict";
 
-/* globals run_next_test, add_test, ok, equal, deepEqual,
-   Components, SEUtils, XPCOMUtils */
+/* globals Ci, AID_1, AID_2, AID_3, AID_4, AID_5, HASH_APP1, HASH_APP2,
+           HASH_APP3, HASH_APP4, initRuleParsingTest, executRuleParsingTest,
+           run_next_test */
 /* exported run_test */
 
-const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
-
-Cu.import("resource://gre/modules/Promise.jsm");
-Cu.import("resource://gre/modules/XPCOMUtils.jsm");
-Cu.import("resource://gre/modules/SEUtils.jsm");
-
-const HASH_APP1 = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
-                   0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11];
-const HASH_APP2 = [0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
-                   0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22];
-const HASH_APP3 = [0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33,
-                   0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33];
-const HASH_APP4 = [0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44,
-                   0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44];
-
-const AID_1 = [0xA0, 0x00, 0x00, 0x01, 0x51, 0x01];
-const AID_2 = [0xA0, 0x00, 0x00, 0x01, 0x51, 0x02];
-const AID_3 = [0xA0, 0x00, 0x00, 0x01, 0x51, 0x03];
-const AID_4 = [0xA0, 0x00, 0x00, 0x01, 0x51, 0x04];
-const AID_5 = [0xA0, 0x00, 0x00, 0x01, 0x51, 0x05];
-
-
 // Secure Element Access Control Version 1.0
-// Annex C, C.1 First Example 
-const GPD_SCENARIO1 = {
-  name: "GPD example 1",
+// Annex C, C.2 Second Example 
+let GPD_SCENARIO2 = {
+  name: "GPD example 2",
   expectedRules: [
     {
       applet: AID_1,
-      application: Ci.nsIAccessRulesManager.DENY_ALL
+      application: Ci.nsIAccessRulesManager.ALLOW_ALL,
     },
     {
       applet: AID_2,
@@ -44,19 +23,46 @@ const GPD_SCENARIO1 = {
     },
     {
       applet: AID_3,
-      application: [HASH_APP1]
+      application: [HASH_APP1, HASH_APP2, HASH_APP3]
+    },
+    {
+      applet: AID_4,
+      application: Ci.nsIAccessRulesManager.DENY_ALL,
+    },
+    {
+      applet: AID_5,
+      application: Ci.nsIAccessRulesManager.DENY_ALL,
     },
     {
       applet: Ci.nsIAccessRulesManager.ALL_APPLET,
-      application: Ci.nsIAccessRulesManager.ALLOW_ALL
+      application: Ci.nsIAccessRulesManager.DENY_ALL,
     }
   ],
+  // not used in rule parsing scenario
   decisionAsserts: [
     {
-      name: "Access denied for app 1 to applet 1.",
+      name: "Access allowed for app 1 to applet 1.",
       applet: AID_1,
       application: HASH_APP1,
-      expectedDecision: false
+      expectedDecision: true
+    },
+    {
+      name: "Access allowed for app 2 to applet 1.",
+      applet: AID_1,
+      application: HASH_APP2,
+      expectedDecision: true
+    },
+    {
+      name: "Access allowed for app 3 to applet 1.",
+      applet: AID_1,
+      application: HASH_APP3,
+      expectedDecision: true
+    },
+    {
+      name: "Access allowed for app 4 to applet 1.",
+      applet: AID_1,
+      application: HASH_APP4,
+      expectedDecision: true
     },
     {
       name: "Access allowed for app 1 to applet 2.",
@@ -65,41 +71,119 @@ const GPD_SCENARIO1 = {
       expectedDecision: true
     },
     {
-      name: "Access allowed for app 1 to applet 3.",
-      applet: AID_3,
-      application: HASH_APP1,
-      expectedDecision: true
-    },
-    {
-      name: "Access denied for app 2 to applet 1.",
-      applet: AID_1,
-      application: HASH_APP2,
-      expectedDecision: false
-    },
-    {
       name: "Access denied for app 2 to applet 2.",
       applet: AID_2,
       application: HASH_APP2,
       expectedDecision: false
     },
     {
-      name: "Access denied for app 2 to applet 3.",
-      applet: AID_3,
-      application: HASH_APP2,
+      name: "Access denied for app 3 to applet 2.",
+      applet: AID_2,
+      application: HASH_APP3,
       expectedDecision: false
     },
     {
-      name: "Access allowed for app 1 to other applet.",
-      applet: [0xA0, 0x00, 0x00, 0x01, 0x51, 0xFF],
+      name: "Access denied for app 4 to applet 2.",
+      applet:AID_2,
+      application: HASH_APP4,
+      expectedDecision: false
+    },
+    {
+      name: "Access allowed for app 1 to applet 3.",
+      applet: AID_3,
       application: HASH_APP1,
       expectedDecision: true
     },
     {
-      name: "Access allowed for app 2 to other applet.",
-      applet: [0xA0, 0x00, 0x00, 0x01, 0x51, 0xFF],
+      name: "Access allowed for app 2 to applet 3.",
+      applet: AID_3,
       application: HASH_APP2,
       expectedDecision: true
-    }
+    },
+    {
+      name: "Access allowed for app 3 to applet 3.",
+      applet: AID_3,
+      application: HASH_APP3,
+      expectedDecision: true
+    },
+    {
+      name: "Access denied for app 4 to applet 3.",
+      applet: AID_3,
+      application: HASH_APP4,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 1 to applet 4.",
+      applet: AID_4,
+      application: HASH_APP1,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 2 to applet 4.",
+      applet: AID_4,
+      application: HASH_APP2,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 3 to applet 4.",
+      applet: AID_4,
+      application: HASH_APP3,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 4 to applet 4.",
+      applet: AID_4,
+      application: HASH_APP4,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 1 to applet 5.",
+      applet: AID_5,
+      application: HASH_APP1,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 2 to applet 5.",
+      applet: AID_5,
+      application: HASH_APP2,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 3 to applet 5.",
+      applet: AID_5,
+      application: HASH_APP3,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 4 to applet 5.",
+      applet: AID_5,
+      application: HASH_APP4,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 1 to other applets.",
+      applet: [0xA0, 0x00, 0x00, 0x01, 0x51, 0xFF],
+      application: HASH_APP1,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 2 to other applets.",
+      applet: [0xA0, 0x00, 0x00, 0x01, 0x51, 0xFF],
+      application: HASH_APP2,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 3 to other applets.",
+      applet: [0xA0, 0x00, 0x00, 0x01, 0x51, 0xFF],
+      application: HASH_APP3,
+      expectedDecision: false
+    },
+    {
+      name: "Access denied for app 4 to other applets.",
+      applet: [0xA0, 0x00, 0x00, 0x01, 0x51, 0xFF],
+      application: HASH_APP4,
+      expectedDecision: false
+    },
   ],
   steps: [
     {
@@ -192,8 +276,10 @@ const GPD_SCENARIO1 = {
       "request": "00 B0 00 00 00", //14",
       "response": "30 10   A0 08 04 06 A0 00 00 01 51 01   30 04 04 02 43 10" +
                   "30 10   A0 08 04 06 A0 00 00 01 51 02   30 04 04 02 43 11" +
-                  "30 10   A0 08 04 06 A0 00 00 01 51 03   30 04 04 02 43 11" +
-                  "30 08   82 00                           30 04 04 02 43 12"
+                  "30 10   A0 08 04 06 A0 00 00 01 51 03   30 04 04 02 43 12" +
+                  "30 10   A0 08 04 06 A0 00 00 01 51 04   30 04 04 02 43 13" +
+                  "30 10   A0 08 04 06 A0 00 00 01 51 05   30 04 04 02 43 13" +
+                  "30 08   82 00                           30 04 04 02 43 13"
     },
     {
       "desc": "Select ACCondition 1",
@@ -205,9 +291,14 @@ const GPD_SCENARIO1 = {
                         "C0 01 40" +
                      "8A 01 05" +
                      "8B 06 6F 06 01 01 00 00" +
-                     "80 02 00 00" +
+                     "80 02 00 02" +
                      "81 02 00 00" +
                      "88 00"
+    },
+    {
+      "desc": "Read ACCondition 1",
+      "request": "00 B0 00 00 00", //02",
+      "response": "30 00"
     },
     {
       "desc": "Select ACCondition 2",
@@ -239,109 +330,39 @@ const GPD_SCENARIO1 = {
                         "C0 01 40" +
                      "8A 01 05" +
                      "8B 06 6F 06 01 01 00 00" +
-                     "80 02 00 02" +
-                     "81 02 00 02" +
+                     "80 02 00 48" +
+                     "81 02 00 48" +
                      "88 00"
     },
     {
       "desc": "Read ACCondition 3",
-      "request": "00 B0 00 00 00", //02",
-      "response": "30 00"
+      "request": "00 B0 00 00 00", //48",
+      "response": "30 16" +
+                     "04 14 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11" +
+                  "30 16" +
+                     "04 14 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22" +
+                  "30 16" +
+                     "04 14 33 33 33 33 33 33 33 33 33 33 33 33 33 33 33 33 33 33 33 33"
+    },
+    {
+      "desc": "Select ACCondition 4",
+      "request": "00 A4 00 04 02 43 13",
+      "response": "62 22" +
+                     "82 02 41 21" +
+                     "83 02 43 00" +
+                     "A5 03" +
+                        "C0 01 40" +
+                     "8A 01 05" +
+                     "8B 06 6F 06 01 01 00 00" +
+                     "80 02 00 00" +
+                     "81 02 00 00" +
+                     "88 00"
     }
   ]
 };
 
-let MockUiccConnector = {
-  set scenario(value) {
-    this._scenario = value;
-    this._step = 0;
-  },
-
-  get scenario() {
-    return this._scenario;
-  },
-
-  _step: 0,
-
-  _channelId: 1,
-
-  openChannel: function(aid, cb) {
-    equal(this._step, 0, "Channel should be opend before first step");
-    ok(!!cb, "Callback object needs to be specified");
-    equal(typeof cb.notifyOpenChannelSuccess, "function",
-        "callback.notifyOpenChannelSuccess should be a funciton");
-    cb.notifyOpenChannelSuccess(this._channelId);
-  },
-
-  exchangeAPDU: function(channel, cla, ins, p1, p2, data, le, cb) {
-    equal(channel, this._channelId, "Exchange should happen on proper channel");
-    ok(!!cb, "Callback object needs to be specified");
-    equal(typeof cb.notifyExchangeAPDUResponse, "function",
-       "callback.notifyExchangeAPDUResponse should be a function");
-
-    let step = this._scenario.steps[this._step];
-    ok(!!step, "Scenario steps already finished, invalid request");
-
-    let request = this._convertAPDUToHexStr(cla, ins, p1, p2, data, le);
-    let expectedRequest = step.request.replace(/\s+/g,"");
-    equal(request, expectedRequest,
-          "Request should match scenario step request");
-
-    this._step += 1;
-    cb.notifyExchangeAPDUResponse(0x90, 0x00, step.response.replace(/\s+/g,""));
-  },
-
-  closeChannel: function(channel, callback) {
-    equal(this._step, this._scenario.steps.length,
-          "Channel should be closed after last step");
-    equal(channel, this._channelId, "Proper channel should be closed");
-    if(callback) {
-      callback.notifyCloseChannelSuccess();
-    }
-  },
-
-  _convertAPDUToHexStr: function(cla, ins, p1, p2, data, le) {
-    var dataLen  = (data) ? data.length/2 : 0;
-    var bytes = [cla, ins, p1, p2, dataLen];
-    return SEUtils.byteArrayToHexString(bytes) + ((dataLen) ? data : "");
-  }
-};
-
-function handleRejectedPromise() {
-  ok(false, "Promise should not be rejected");
-}
-
-let GPAccessRulesManager = null;
-
 function run_test() {
-  XPCOMUtils.defineLazyServiceGetter = (obj) => {
-    obj.UiccConnector = MockUiccConnector;
-  };
-
-  GPAccessRulesManager =
-    Cc["@mozilla.org/secureelement/access-control/rules-manager;1"]
-    .createInstance(Ci.nsIAccessRulesManager);
-
-  ok(!!GPAccessRulesManager, "RulesManager should be instantiated");
-  run_next_test();
-}
-
-add_test(function test_GPDScenario1_rule_parsing() {
-  MockUiccConnector.scenario = GPD_SCENARIO1;
-  GPAccessRulesManager.getAccessRules().then((rules) => {
-    ok(true, JSON.stringify(rules));
-    rules.forEach((rule, idx) => {
-      let expectedRule = MockUiccConnector.scenario.expectedRules[idx];
-
-      ok(true, "Actuall " + JSON.stringify(rule));
-      ok(true, "Expected " + JSON.stringify(expectedRule));
-
-      deepEqual(rule.applet, expectedRule.applet,
-         "Rule " + idx + " applet property should match, ");
-      deepEqual(rule.application, expectedRule.application,
-         "Rule " + idx + " application property should match");
-    });
-  })
-  .catch(handleRejectedPromise)
+  initRuleParsingTest();
+  executRuleParsingTest(GPD_SCENARIO2)
   .then(run_next_test);
-});
+}
